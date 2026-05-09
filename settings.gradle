@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        maven { url = "https://maven.fabricmc.net/" }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "legacy-mod-settings"
+
+gradle.ext.defaultMc = settings.providers
+    .gradleProperty("defaultMc")
+    .getOrElse("1.21.10")

@@ -1,0 +1,190 @@
+buildscript {
+    repositories {
+        maven { url = uri("https://maven.fabricmc.net/") }
+    }
+    dependencies {
+        classpath "net.fabricmc:fabric-loom:1.16-SNAPSHOT"
+    }
+}
+plugins {
+    id "maven-publish"
+}
+
+// Keep all version pins in one map so buildAll and single-version builds resolve identically.
+def versions = [
+    "1.21.1": [
+        loader:    "0.19.1",
+        fabricApi: "0.116.7+1.21.1",
+        iris:      "1.8.8+1.21.1-fabric",
+        cloth:     "15.0.140",
+        modmenu:   "11.0.4",
+        java:      21
+    ],
+    "1.21.8": [
+        loader:    "0.19.1",
+        fabricApi: "0.136.1+1.21.8",
+        iris:      "1.9.6+1.21.8-fabric",
+        cloth:     "19.0.147",
+        modmenu:   "15.0.2",
+        java:      21
+    ],
+    "1.21.10": [
+        loader:    "0.16.12",
+        fabricApi: "0.138.0+1.21.10",
+        iris:      "1.9.7+1.21.10-fabric",
+        cloth:     "20.0.149",
+        modmenu:   "16.0.1",
+        java:      21
+    ],
+    "26.1.2": [
+        loader:         "0.19.2",
+        fabricApi:      "0.148.0+26.1.2",
+        iris:           "1.10.9+26.1-fabric",
+        cloth:          "26.1.154",
+        modmenu:        "18.0.0-alpha.8",
+        java:           25,
+        javaHome:       "/usr/lib/jvm/java-25-openjdk",
+        nonObfuscated:  true
+    ],
+]
+
+def targetMc = findProperty("mc") ?: gradle.ext.defaultMc
+
+if (!versions.containsKey(targetMc)) {
+    throw new GradleException(
+        "Unsupported MC version '${targetMc}'.\n" +
+        "Valid options: ${versions.keySet().sort().join(', ')}\n" +
+        "Example: ./gradlew build -Pmc=1.21.10"
+    )
+}
+
+def v = versions[targetMc]
+
+// Loom must be selected after target version resolution because plugin behavior differs by mapping model.
+def isNonObfuscated = v.nonObfuscated ?: false
+if (isNonObfuscated) {
+    apply plugin: "net.fabricmc.fabric-loom"
+} else {
+    apply plugin: "net.fabricmc.fabric-loom-remap"
+}
+
+// MC 26.x needs a command API shim while older versions use the shared source set only.
+if (isNonObfuscated) {
+    sourceSets.main.java.srcDirs += "src/main/java-26"
+}
+
+group   = "com.mtxcore.legacymodsettings"
+version = "${mod_version}+mc${targetMc}"
+
+base {
+    archivesName = "legacy-mod-settings"
+}
+
+repositories {
+    mavenCentral()
+    maven { url = "https://maven.fabricmc.net/" }
+    maven { url = "https://maven.shedaniel.me/" }
+
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url  = "https://api.modrinth.com/maven"
+            }
+        }
+        filter { includeGroup "maven.modrinth" }
+    }
+}
+
+def implConfig      = isNonObfuscated ? "implementation"  : "modImplementation"
+def compileOnlyConf = isNonObfuscated ? "compileOnly"     : "modCompileOnly"
+
+dependencies {
+    minecraft "com.mojang:minecraft:${targetMc}"
+    if (!isNonObfuscated) {
+        mappings loom.officialMojangMappings()
+    }
+
+    "${implConfig}" "net.fabricmc:fabric-loader:${v.loader}"
+    "${implConfig}" "net.fabricmc.fabric-api:fabric-api:${v.fabricApi}"
+
+    "${compileOnlyConf}" "maven.modrinth:iris:${v.iris}"
+    "${compileOnlyConf}" "me.shedaniel.cloth:cloth-config-fabric:${v.cloth}"
+
+    "${compileOnlyConf}" "maven.modrinth:modmenu:${v.modmenu}"
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(v.java)
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release  = v.java
+}
+
+processResources {
+    inputs.property "version",    project.version
+    inputs.property "mc_version", targetMc
+
+    filesMatching("*.mod.json") {
+        expand(
+            version:    project.version,
+            mc_version: targetMc
+        )
+    }
+}
+
+tasks.register("buildAll") {
+    group       = "build"
+    description = "Builds a jar for every supported Minecraft version."
+
+    // ExecOperations is the cache-safe replacement for project.exec in modern Gradle.
+    def execOps = services.get(org.gradle.process.ExecOperations)
+
+    doLast {
+        def failures = []
+        def isWindows = System.properties["os.name"].toLowerCase().contains("win")
+        def gradleCmd = isWindows ? "gradlew.bat" : "./gradlew"
+
+        // Run each version in its own Gradle invocation to avoid Loom cross-version state bleed.
+        versions.keySet().sort().each { mc ->
+            println "\n========== Building for MC ${mc} =========="
+
+            def vmap = versions[mc]
+            def cmdLine = [gradleCmd, "build", "-Pmc=${mc}", "--console=plain"]
+            if (vmap.javaHome) {
+                cmdLine += "-Dorg.gradle.java.home=${vmap.javaHome}"
+            }
+
+            def result = execOps.exec {
+                commandLine cmdLine
+                ignoreExitValue = true
+            }
+
+            if (result.getExitValue() != 0) {
+                failures << mc
+                println "FAILED for MC ${mc}"
+            } else {
+                println "SUCCESS for MC ${mc}"
+            }
+        }
+
+        if (failures) {
+            throw new GradleException("buildAll failed for: ${failures.join(', ')}")
+        }
+
+        println "\n========== buildAll complete =========="
+        println "Jars are in build/libs/"
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId = base.archivesName.get()
+        }
+    }
+}

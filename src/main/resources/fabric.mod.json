@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "legacy-mod-settings",
+  "version": "${version}",
+  "name": "Legacy Mod Settings",
+  "icon": "icon.png",
+  "description": "Integrates popular client mods natively into Legacy4J settings menus, as if 4J Studios had added them themselves.",
+  "authors": ["mtxcore"],
+  "contact": {
+    "sources": "https://github.com/mtxcore/legacy-mod-settings"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.mtxcore.legacymodsettings.LegacyModSettings"],
+    "modmenu": ["com.mtxcore.legacymodsettings.ModMenuIntegration"]
+  },
+  "mixins": ["legacy_mod_settings.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16",
+    "fabric-api": "*",
+    "minecraft": "*",
+    "legacy": "*",
+    "cloth-config2": "*"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "iris": "*",
+    "lambdynlights": "*",
+    "lambdabettergrass": "*",
+    "continuity": "*",
+    "notenoughanimations": "*",
+    "proplacer": "*",
+    "chat_heads": "*",
+    "locator_lodestones": "*",
+    "sodium": "*",
+    "bobby": "*",
+    "zoomify": "*",
+    "presencefootsteps": "*",
+    "xaerominimap": "*"
+  }
+}

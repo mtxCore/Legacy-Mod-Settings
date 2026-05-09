@@ -1,0 +1,7 @@
+.gradle/
+.vscode/
+build/
+node_modules/
+out/
+.idea/
+*.class
