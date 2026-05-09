@@ -10,6 +10,99 @@ final class XaeroMinimapCompat {
 
   private XaeroMinimapCompat() {}
 
+  private static Boolean desiredState() {
+    if (minimapDesired != null)
+      return minimapDesired;
+    return ModSettingsConfig.get().xaeroMinimapEnabled;
+  }
+
+  private record
+      XaeroModernApi(Object settings, RefUtil.MethodRef getMinimap,
+                     RefUtil.MethodRef saveSettings, Object config,
+                     Object displayMinimapOption, RefUtil.MethodRef setOption,
+                     RefUtil.MethodRef getOption) {}
+
+  /**
+   * Resolves Xaero API by navigating: HudMod.INSTANCE →
+   * getSettings() → settings object, and HudMod.INSTANCE → getHudConfigs() →
+   * getClientConfigManager() → getPrimaryConfigManager() → getConfig().
+   *
+   * @return the resolved API capsule, or null if any step fails.
+   */
+  private static XaeroModernApi resolveModernApi() {
+    Object hudMod = RefUtil.staticField("xaero.common.HudMod", "INSTANCE");
+    if (hudMod == null)
+      return null;
+
+    // Settings path: hudMod → getSettings() → settingsObj
+    RefUtil.MethodRef getSettingsFromHud =
+        RefUtil.method(hudMod.getClass(), "getSettings");
+    Object settingsObj =
+        getSettingsFromHud == null ? null : getSettingsFromHud.invoke(hudMod);
+    if (settingsObj == null)
+      return null;
+
+    RefUtil.MethodRef getMinimap =
+        RefUtil.method(settingsObj.getClass(), "getMinimap");
+    RefUtil.MethodRef saveSettings =
+        RefUtil.method(settingsObj.getClass(), "saveSettings");
+
+    // Config path: hudMod → getHudConfigs() → channel →
+    // getClientConfigManager() → clientCfgMgr → getPrimaryConfigManager() →
+    // primaryCfgMgr → getConfig() → config
+    RefUtil.MethodRef getHudConfigs =
+        RefUtil.method(hudMod.getClass(), "getHudConfigs");
+    Object channel =
+        getHudConfigs == null ? null : getHudConfigs.invoke(hudMod);
+
+    RefUtil.MethodRef getClientConfigManager =
+        channel == null
+            ? null
+            : RefUtil.method(channel.getClass(), "getClientConfigManager");
+    Object clientCfgMgr = getClientConfigManager == null
+                              ? null
+                              : getClientConfigManager.invoke(channel);
+
+    RefUtil.MethodRef getPrimaryConfigManager =
+        clientCfgMgr == null ? null
+                             : RefUtil.method(clientCfgMgr.getClass(),
+                                              "getPrimaryConfigManager");
+    Object primaryCfgMgr = getPrimaryConfigManager == null
+                               ? null
+                               : getPrimaryConfigManager.invoke(clientCfgMgr);
+
+    RefUtil.MethodRef getConfig =
+        primaryCfgMgr == null
+            ? null
+            : RefUtil.method(primaryCfgMgr.getClass(), "getConfig");
+    Object config = getConfig == null ? null : getConfig.invoke(primaryCfgMgr);
+
+    // Config option and methods
+    Object displayMinimapOption = RefUtil.staticField(
+        "xaero.hud.minimap.common.config.option.MinimapProfiledConfigOptions",
+        "DISPLAY_MINIMAP");
+    Class<?> configOptionClass =
+        RefUtil.classForName("xaero.lib.common.config.option.ConfigOption");
+
+    RefUtil.MethodRef setOption =
+        (config == null || configOptionClass == null)
+            ? null
+            : RefUtil.method(config.getClass(), "set", configOptionClass,
+                             Object.class);
+    RefUtil.MethodRef getOption =
+        (config == null || configOptionClass == null)
+            ? null
+            : RefUtil.method(config.getClass(), "get", configOptionClass);
+
+    if (getMinimap == null || config == null || displayMinimapOption == null ||
+        setOption == null) {
+      return null;
+    }
+
+    return new XaeroModernApi(settingsObj, getMinimap, saveSettings, config,
+                              displayMinimapOption, setOption, getOption);
+  }
+
   static void addEntries(ModSettingsCompat.Section section,
                          List<ModSettingsCompat.Entry> entries) {
     if (!ModSettingsCompat.matchesSectionWithLegacyMerge(
@@ -20,99 +113,38 @@ final class XaeroMinimapCompat {
     if (!RefUtil.isModLoaded("xaerominimap", "xaeros_minimap", "xaerosminimap"))
       return;
 
-    Object hudMod = RefUtil.staticField("xaero.common.HudMod", "INSTANCE");
-    if (hudMod != null) {
-      RefUtil.MethodRef getSettingsFromHud =
-          RefUtil.method(hudMod.getClass(), "getSettings");
-      Object settingsObj =
-          getSettingsFromHud == null ? null : getSettingsFromHud.invoke(hudMod);
-      RefUtil.MethodRef getMinimap =
-          settingsObj == null
-              ? null
-              : RefUtil.method(settingsObj.getClass(), "getMinimap");
-      RefUtil.MethodRef saveSettings =
-          settingsObj == null
-              ? null
-              : RefUtil.method(settingsObj.getClass(), "saveSettings");
-
-      RefUtil.MethodRef getHudConfigs =
-          RefUtil.method(hudMod.getClass(), "getHudConfigs");
-      Object channel =
-          getHudConfigs == null ? null : getHudConfigs.invoke(hudMod);
-      RefUtil.MethodRef getClientConfigManager =
-          channel == null
-              ? null
-              : RefUtil.method(channel.getClass(), "getClientConfigManager");
-      Object clientCfgMgr = getClientConfigManager == null
-                                ? null
-                                : getClientConfigManager.invoke(channel);
-      RefUtil.MethodRef getPrimaryConfigManager =
-          clientCfgMgr == null ? null
-                               : RefUtil.method(clientCfgMgr.getClass(),
-                                                "getPrimaryConfigManager");
-      Object primaryCfgMgr = getPrimaryConfigManager == null
-                                 ? null
-                                 : getPrimaryConfigManager.invoke(clientCfgMgr);
-      RefUtil.MethodRef getConfig =
-          primaryCfgMgr == null
-              ? null
-              : RefUtil.method(primaryCfgMgr.getClass(), "getConfig");
-      Object config =
-          getConfig == null ? null : getConfig.invoke(primaryCfgMgr);
-      Object displayMinimapOption = RefUtil.staticField(
-          "xaero.hud.minimap.common.config.option.MinimapProfiledConfigOptions",
-          "DISPLAY_MINIMAP");
-      Class<?> configOptionClass =
-          RefUtil.classForName("xaero.lib.common.config.option.ConfigOption");
-      RefUtil.MethodRef setOption =
-          (config == null || configOptionClass == null)
-              ? null
-              : RefUtil.method(config.getClass(), "set", configOptionClass,
-                               Object.class);
-
-      RefUtil.MethodRef getOption =
-          (config == null || configOptionClass == null)
-              ? null
-              : RefUtil.method(config.getClass(), "get", configOptionClass);
-
-      if (settingsObj != null && getMinimap != null && config != null &&
-          displayMinimapOption != null && setOption != null) {
-        final Object finalSettings = settingsObj;
-        final RefUtil.MethodRef finalGetMinimap = getMinimap;
-        final Object finalConfig = config;
-        final Object finalDisplayMinimapOption = displayMinimapOption;
-        final RefUtil.MethodRef finalSetOption = setOption;
-        final RefUtil.MethodRef finalGetOption = getOption;
-        final RefUtil.MethodRef finalSaveSettings = saveSettings;
-
-        entries.add(ModSettingsCompat.Entry.toggleBefore(
-            "after:dynamic lighting|view bobbing",
-            ()
-                -> Component.literal("Minimap"),
-            ()
-                -> {
-              boolean next = !getMinimapEnabled(finalGetOption, finalConfig,
-                                                finalDisplayMinimapOption,
-                                                finalGetMinimap, finalSettings);
-              minimapDesired = next;
-              CompatDebug.log("Minimap toggle (modern path) -> {}", next);
-              applyModSettingsToggle(next);
-              finalSetOption.invoke(finalConfig, finalDisplayMinimapOption,
-                                    next);
-              applyBooleanSetter(finalSettings, next, "setMinimap",
-                                 "setDisplayMinimap", "setEnabled");
-              if (finalSaveSettings != null)
-                finalSaveSettings.invoke(finalSettings);
-            },
-            ()
-                -> getMinimapEnabled(finalGetOption, finalConfig,
-                                     finalDisplayMinimapOption, finalGetMinimap,
-                                     finalSettings),
-            ()
-                -> Component.literal("Show a minimap of your surroundings in "
-                                     + "the corner of the screen.")));
-        return;
-      }
+    XaeroModernApi modernApi = resolveModernApi();
+    if (modernApi != null) {
+      entries.add(ModSettingsCompat.Entry.toggleBefore(
+          "after:dynamic lighting|view bobbing",
+          ()
+              -> Component.literal("Minimap"),
+          ()
+              -> {
+            boolean next = !getMinimapEnabled(
+                modernApi.getOption(), modernApi.config(),
+                modernApi.displayMinimapOption(), modernApi.getMinimap(),
+                modernApi.settings());
+            minimapDesired = next;
+            RefUtil.persistModDesired(next, RefUtil.PersistKey.XAERO_MINIMAP);
+            CompatDebug.log("Minimap toggle (modern path) -> {}", next);
+            applyModSettingsToggle(next);
+            modernApi.setOption().invoke(
+                modernApi.config(), modernApi.displayMinimapOption(), next);
+            applyBooleanSetter(modernApi.settings(), next, "setMinimap",
+                               "setDisplayMinimap", "setEnabled");
+            if (modernApi.saveSettings() != null)
+              modernApi.saveSettings().invoke(modernApi.settings());
+          },
+          ()
+              -> getMinimapEnabled(modernApi.getOption(), modernApi.config(),
+                                   modernApi.displayMinimapOption(),
+                                   modernApi.getMinimap(),
+                                   modernApi.settings()),
+          ()
+              -> Component.literal("Show a minimap of your surroundings in "
+                                   + "the corner of the screen.")));
+      return;
     }
 
     Object settings =
@@ -161,6 +193,8 @@ final class XaeroMinimapCompat {
           boolean next = !getMinimapEnabled(null, null, null, null, null,
                                             finalCfg, finalEnabled);
           minimapDesired = next;
+          RefUtil.persistModDesired(minimapDesired,
+                                    RefUtil.PersistKey.XAERO_MINIMAP);
           CompatDebug.log("Minimap toggle (legacy path) -> {}", next);
           RefUtil.writeField(finalCfg, finalEnabled, next);
           applyBooleanSetter(finalCfg, next, "setMinimap", "setDisplayMinimap",
@@ -178,73 +212,31 @@ final class XaeroMinimapCompat {
   }
 
   static void enforceRuntimeState() {
-    if (minimapDesired == null)
+    Boolean desired = desiredState();
+    if (desired == null)
       return;
+    minimapDesired = desired;
     if (!RefUtil.isModLoaded("xaerominimap", "xaeros_minimap", "xaerosminimap"))
       return;
 
-    Object hudMod = RefUtil.staticField("xaero.common.HudMod", "INSTANCE");
-    if (hudMod != null) {
-      RefUtil.MethodRef getSettingsFromHud =
-          RefUtil.method(hudMod.getClass(), "getSettings");
-      Object settingsObj =
-          getSettingsFromHud == null ? null : getSettingsFromHud.invoke(hudMod);
-      RefUtil.MethodRef saveSettings =
-          settingsObj == null
-              ? null
-              : RefUtil.method(settingsObj.getClass(), "saveSettings");
-
-      RefUtil.MethodRef getHudConfigs =
-          RefUtil.method(hudMod.getClass(), "getHudConfigs");
-      Object channel =
-          getHudConfigs == null ? null : getHudConfigs.invoke(hudMod);
-      RefUtil.MethodRef getClientConfigManager =
-          channel == null
-              ? null
-              : RefUtil.method(channel.getClass(), "getClientConfigManager");
-      Object clientCfgMgr = getClientConfigManager == null
-                                ? null
-                                : getClientConfigManager.invoke(channel);
-      RefUtil.MethodRef getPrimaryConfigManager =
-          clientCfgMgr == null ? null
-                               : RefUtil.method(clientCfgMgr.getClass(),
-                                                "getPrimaryConfigManager");
-      Object primaryCfgMgr = getPrimaryConfigManager == null
-                                 ? null
-                                 : getPrimaryConfigManager.invoke(clientCfgMgr);
-      RefUtil.MethodRef getConfig =
-          primaryCfgMgr == null
-              ? null
-              : RefUtil.method(primaryCfgMgr.getClass(), "getConfig");
-      Object config =
-          getConfig == null ? null : getConfig.invoke(primaryCfgMgr);
-      Object displayMinimapOption = RefUtil.staticField(
-          "xaero.hud.minimap.common.config.option.MinimapProfiledConfigOptions",
-          "DISPLAY_MINIMAP");
-      Class<?> configOptionClass =
-          RefUtil.classForName("xaero.lib.common.config.option.ConfigOption");
-      RefUtil.MethodRef setOption =
-          (config == null || configOptionClass == null)
-              ? null
-              : RefUtil.method(config.getClass(), "set", configOptionClass,
-                               Object.class);
-      RefUtil.MethodRef getOption =
-          (config == null || configOptionClass == null)
-              ? null
-              : RefUtil.method(config.getClass(), "get", configOptionClass);
-      if (setOption != null && displayMinimapOption != null) {
-        boolean current = readMinimapEnabled(
-            getOption, config, displayMinimapOption, null, settingsObj);
-        if (current != minimapDesired) {
-          CompatDebug.log("Enforcing minimap -> {}", minimapDesired);
-          applyModSettingsToggle(minimapDesired);
-          setOption.invoke(config, displayMinimapOption, minimapDesired);
-        }
-        applyBooleanSetter(settingsObj, minimapDesired, "setMinimap",
-                           "setDisplayMinimap", "setEnabled");
-        if (saveSettings != null)
-          saveSettings.invoke(settingsObj);
+    XaeroModernApi modernApi = resolveModernApi();
+    if (modernApi != null) {
+      boolean current =
+          readMinimapEnabled(modernApi.getOption(), modernApi.config(),
+                             modernApi.displayMinimapOption(),
+                             modernApi.getMinimap(), modernApi.settings());
+      if (current != minimapDesired) {
+        CompatDebug.log("Enforcing minimap -> {}", minimapDesired);
+        applyModSettingsToggle(minimapDesired);
+        modernApi.setOption().invoke(modernApi.config(),
+                                     modernApi.displayMinimapOption(),
+                                     minimapDesired);
       }
+      applyBooleanSetter(modernApi.settings(), minimapDesired, "setMinimap",
+                         "setDisplayMinimap", "setEnabled");
+      if (modernApi.saveSettings() != null)
+        modernApi.saveSettings().invoke(modernApi.settings());
+      return;
     }
 
     Object settings =
@@ -336,8 +328,9 @@ final class XaeroMinimapCompat {
                                            Object displayMinimapOption,
                                            RefUtil.MethodRef getMinimap,
                                            Object settings) {
-    if (minimapDesired != null)
-      return minimapDesired;
+    Boolean desired = desiredState();
+    if (desired != null)
+      return desired;
     return readMinimapEnabled(getOption, config, displayMinimapOption,
                               getMinimap, settings);
   }
@@ -346,8 +339,9 @@ final class XaeroMinimapCompat {
   getMinimapEnabled(RefUtil.MethodRef getOption, Object config,
                     Object displayMinimapOption, RefUtil.MethodRef getMinimap,
                     Object settings, Object cfg, Field enabledField) {
-    if (minimapDesired != null)
-      return minimapDesired;
+    Boolean desired = desiredState();
+    if (desired != null)
+      return desired;
     if (enabledField != null)
       return RefUtil.readBooleanField(cfg, enabledField, true);
     return readMinimapEnabled(getOption, config, displayMinimapOption,

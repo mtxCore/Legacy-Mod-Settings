@@ -14,6 +14,12 @@ final class ContinuityCompat {
 
   private ContinuityCompat() {}
 
+  private static Boolean desiredConnectedTexturesState() {
+    if (connectedTexturesDesired != null)
+      return connectedTexturesDesired;
+    return ModSettingsConfig.get().continuityConnectedTexturesEnabled;
+  }
+
   static void addEntries(ModSettingsCompat.Section section,
                          List<ModSettingsCompat.Entry> entries) {
     if (section != ModSettingsCompat.Section.ADVANCED_GRAPHICS)
@@ -72,6 +78,7 @@ final class ContinuityCompat {
 
           if ("Connected Textures".equals(label)) {
             connectedTexturesDesired = next;
+            RefUtil.persistModDesired(next, RefUtil.PersistKey.CONTINUITY);
             applyConnectedTexturesConfig(next);
             CompatDebug.log("Connected Textures toggle -> {}", next);
             for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
@@ -92,8 +99,10 @@ final class ContinuityCompat {
   }
 
   static void enforceRuntimeState() {
-    if (connectedTexturesDesired == null)
+    Boolean desired = desiredConnectedTexturesState();
+    if (desired == null)
       return;
+    connectedTexturesDesired = desired;
     if (!RefUtil.isModLoaded("continuity"))
       return;
 
@@ -180,8 +189,9 @@ final class ContinuityCompat {
 
   private static boolean
   getConnectedTexturesEnabled(RefUtil.MethodRef isEnabled, Object state) {
-    if (connectedTexturesDesired != null)
-      return connectedTexturesDesired;
+    Boolean desired = desiredConnectedTexturesState();
+    if (desired != null)
+      return desired;
     return RefUtil.invokeBoolean(isEnabled, state, true);
   }
 }

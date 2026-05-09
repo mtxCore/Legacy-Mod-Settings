@@ -28,8 +28,15 @@ public final class LocatorLodestonesCompat {
 
   private LocatorLodestonesCompat() {}
 
+  private static Boolean desiredLocatorState() {
+    if (locatorDesired != null)
+      return locatorDesired;
+    return ModSettingsConfig.get().locatorCompassEnabled;
+  }
+
   public static boolean isRuntimeEnabled() {
-    return locatorDesired == null || locatorDesired;
+    Boolean desired = desiredLocatorState();
+    return desired == null || desired;
   }
 
   static void addEntries(ModSettingsCompat.Section section,
@@ -54,6 +61,8 @@ public final class LocatorLodestonesCompat {
             -> {
           boolean next = !getLocatorEnabled(settings);
           locatorDesired = next;
+          RefUtil.persistModDesired(locatorDesired,
+                                    RefUtil.PersistKey.LOCATOR_LODESTONES);
           CompatDebug.log("Locator Compass toggle -> {}", next);
           setTabDisplayEnabled(next);
           for (Object setting : settings) {
@@ -70,8 +79,10 @@ public final class LocatorLodestonesCompat {
   }
 
   static void enforceRuntimeState() {
-    if (locatorDesired == null)
+    Boolean desired = desiredLocatorState();
+    if (desired == null)
       return;
+    locatorDesired = desired;
     if (!RefUtil.isModLoaded("locator_lodestones"))
       return;
 
@@ -120,8 +131,9 @@ public final class LocatorLodestonesCompat {
   }
 
   private static boolean getLocatorEnabled(Object[] settings) {
-    if (locatorDesired != null)
-      return locatorDesired;
+    Boolean desired = desiredLocatorState();
+    if (desired != null)
+      return desired;
     return isTabDisplayEnabled() && areAllEnabled(settings);
   }
 

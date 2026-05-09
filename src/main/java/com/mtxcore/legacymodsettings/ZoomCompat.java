@@ -15,6 +15,12 @@ final class ZoomCompat {
 
   private ZoomCompat() {}
 
+  private static Boolean desiredZoomState() {
+    if (zoomDesired != null)
+      return zoomDesired;
+    return ModSettingsConfig.get().zoomEnabled;
+  }
+
   static void addEntries(ModSettingsCompat.Section section,
                          List<ModSettingsCompat.Entry> entries) {
     if (!ModSettingsCompat.matchesSectionWithLegacyMerge(
@@ -48,6 +54,7 @@ final class ZoomCompat {
               boolean next =
                   !getZoomEnabled(cfg, enabled, zoomKey, secondaryZoomKey);
               zoomDesired = next;
+              RefUtil.persistModDesired(next, RefUtil.PersistKey.ZOOM);
               CompatDebug.log("Zoom toggle (Zoomify config path) -> {}", next);
               applyZoomifyState(cfg, enabled, save, zoomKey, secondaryZoomKey,
                                 next);
@@ -77,6 +84,7 @@ final class ZoomCompat {
             -> {
           boolean next = !getZoomEnabled(null, null, zoomKey, secondaryZoomKey);
           zoomDesired = next;
+          RefUtil.persistModDesired(next, RefUtil.PersistKey.ZOOM);
           CompatDebug.log("Zoom toggle (keybind fallback path) -> {}", next);
           applyZoomKeyState(zoomKey, next, false);
           applyZoomKeyState(secondaryZoomKey, next, true);
@@ -86,7 +94,7 @@ final class ZoomCompat {
         },
         ()
             -> getZoomEnabled(null, null, zoomKey, secondaryZoomKey),
-        () -> Component.literal("Enable or disable camera zoom.")));
+        () -> Component.literal("Enable or disable manual camera zoom.")));
     return true;
   }
 
@@ -129,8 +137,12 @@ final class ZoomCompat {
   }
 
   static void enforceRuntimeState() {
-    if (zoomDesired == null)
+    Boolean desired = desiredZoomState();
+    if (desired == null)
       return;
+    // Appears non-op but don't change because it persists the desired state for
+    // future reference in getZoomEnabled()
+    zoomDesired = desired;
 
     Object cfg = RefUtil.staticField(
         "dev.isxander.zoomify.config.ZoomifySettings", "INSTANCE");
@@ -172,8 +184,9 @@ final class ZoomCompat {
   private static boolean getZoomEnabled(Object cfg, Field enabledField,
                                         KeyMapping zoomKey,
                                         KeyMapping secondaryZoomKey) {
-    if (zoomDesired != null)
-      return zoomDesired;
+    Boolean desired = desiredZoomState();
+    if (desired != null)
+      return desired;
     if (cfg != null && enabledField != null) {
       return isZoomEnabled(cfg, enabledField, zoomKey, secondaryZoomKey);
     }
@@ -200,28 +213,71 @@ final class ZoomCompat {
       InputConstants.Key remembered =
           secondary ? lastSecondaryZoomKey : lastZoomKey;
       InputConstants.Key restore =
-          remembered == null ? zoomKey.getDefaultKey() : remembered;
+          (remembered == null || remembered == InputConstants.UNKNOWN)
+              ? zoomKey.getDefaultKey()
+              : remembered;
       zoomKey.setKey(restore);
+      refreshKeyMappings();
       return;
     }
 
-    Field keyField = RefUtil.field(zoomKey.getClass(), "key");
-    Object current =
-        keyField == null ? null : RefUtil.readField(zoomKey, keyField);
-    if (current instanceof InputConstants.Key key &&
-        key != InputConstants.UNKNOWN) {
+    // Clear any latched key state/click queue before unbinding so HOLD/TOGGLE
+    // modes cannot continue zooming after disable.
+    clearKeyInputState(zoomKey);
+
+    InputConstants.Key current = readCurrentKey(zoomKey);
+    if (current != null && current != InputConstants.UNKNOWN) {
       if (secondary)
-        lastSecondaryZoomKey = key;
+        lastSecondaryZoomKey = current;
       else
-        lastZoomKey = key;
+        lastZoomKey = current;
     }
     zoomKey.setKey(InputConstants.UNKNOWN);
+    refreshKeyMappings();
+  }
+
+  private static InputConstants.Key readCurrentKey(KeyMapping key) {
+    if (key == null)
+      return null;
+
+    RefUtil.MethodRef getKey = RefUtil.method(key.getClass(), "getKey");
+    if (getKey != null) {
+      Object value = getKey.invoke(key);
+      if (value instanceof InputConstants.Key inputKey)
+        return inputKey;
+    }
+
+    Field keyField = RefUtil.field(key.getClass(), "key");
+    Object value = keyField == null ? null : RefUtil.readField(key, keyField);
+    if (value instanceof InputConstants.Key inputKey)
+      return inputKey;
+    return null;
+  }
+
+  private static void refreshKeyMappings() {
+    RefUtil.MethodRef reset =
+        RefUtil.staticMethod("net.minecraft.client.KeyMapping", "resetMapping");
+    if (reset != null)
+      reset.invokeStatic();
+
+    Minecraft mc = Minecraft.getInstance();
+    if (mc != null && mc.options != null)
+      mc.options.save();
   }
 
   private static boolean isAnyZoomKeyBound(KeyMapping zoomKey,
                                            KeyMapping secondaryZoomKey) {
     return ((zoomKey != null && !zoomKey.isUnbound()) ||
             (secondaryZoomKey != null && !secondaryZoomKey.isUnbound()));
+  }
+
+  private static void clearKeyInputState(KeyMapping key) {
+    if (key == null)
+      return;
+    key.setDown(false);
+    while (key.consumeClick()) {
+      // Drain queued clicks from toggle-style handling.
+    }
   }
 
   private static void forceZoomifyRuntimeState(boolean enabled) {
@@ -236,10 +292,69 @@ final class ZoomCompat {
     Field zooming = RefUtil.field(instance.getClass(), "zooming");
     Field secondaryZooming =
         RefUtil.field(instance.getClass(), "secondaryZooming");
+    Field scrollSteps = RefUtil.field(instance.getClass(), "scrollSteps");
+    Field zoomKeyField = RefUtil.field(instance.getClass(), "zoomKey");
+    Field secondaryZoomKeyField =
+        RefUtil.field(instance.getClass(), "secondaryZoomKey");
+    Field scrollZoomInField =
+        RefUtil.field(instance.getClass(), "scrollZoomIn");
+    Field scrollZoomOutField =
+        RefUtil.field(instance.getClass(), "scrollZoomOut");
     if (zooming != null)
       RefUtil.writeField(instance, zooming, false);
     if (secondaryZooming != null)
       RefUtil.writeField(instance, secondaryZooming, false);
+    if (scrollSteps != null)
+      RefUtil.writeField(instance, scrollSteps, 0);
+
+    Object zoomKeyObj =
+        zoomKeyField == null ? null : RefUtil.readField(instance, zoomKeyField);
+    if (zoomKeyObj instanceof KeyMapping key)
+      clearKeyInputState(key);
+
+    Object secondaryKeyObj =
+        secondaryZoomKeyField == null
+            ? null
+            : RefUtil.readField(instance, secondaryZoomKeyField);
+    if (secondaryKeyObj instanceof KeyMapping key)
+      clearKeyInputState(key);
+
+    Object scrollInObj = scrollZoomInField == null
+                             ? null
+                             : RefUtil.readField(instance, scrollZoomInField);
+    if (scrollInObj instanceof KeyMapping key)
+      clearKeyInputState(key);
+
+    Object scrollOutObj = scrollZoomOutField == null
+                              ? null
+                              : RefUtil.readField(instance, scrollZoomOutField);
+    if (scrollOutObj instanceof KeyMapping key)
+      clearKeyInputState(key);
+
+    Field zoomHelperField = RefUtil.field(instance.getClass(), "zoomHelper");
+    Object zoomHelper = zoomHelperField == null
+                            ? null
+                            : RefUtil.readField(instance, zoomHelperField);
+    if (zoomHelper != null) {
+      RefUtil.MethodRef setToZero = RefUtil.method(
+          zoomHelper.getClass(), "setToZero", boolean.class, boolean.class);
+      if (setToZero != null)
+        setToZero.invoke(zoomHelper, true, true);
+    }
+
+    Field secondaryZoomHelperField =
+        RefUtil.field(instance.getClass(), "secondaryZoomHelper");
+    Object secondaryHelper =
+        secondaryZoomHelperField == null
+            ? null
+            : RefUtil.readField(instance, secondaryZoomHelperField);
+    if (secondaryHelper != null) {
+      RefUtil.MethodRef setToZero =
+          RefUtil.method(secondaryHelper.getClass(), "setToZero", boolean.class,
+                         boolean.class);
+      if (setToZero != null)
+        setToZero.invoke(secondaryHelper, true, true);
+    }
   }
 
   private static void applyZoomifyCompanionSettings(boolean enabled) {

@@ -41,41 +41,45 @@ public class IrisCompat {
     if (!isIrisLoaded())
       return;
 
-    if (enable) {
-      ModSettingsConfig cfg = ModSettingsConfig.get();
-      if (cfg.irisShaderMode == ModSettingsConfig.IrisShaderMode.SPECIFIC &&
-          cfg.irisSpecificShader != null && !cfg.irisSpecificShader.isBlank()) {
-        applySpecificShaderPack(cfg.irisSpecificShader);
+    if (!enable) {
+      setShadersEnabled(false);
+      return;
+    }
+
+    ModSettingsConfig cfg = ModSettingsConfig.get();
+    if (cfg.irisShaderMode == ModSettingsConfig.IrisShaderMode.SPECIFIC &&
+        cfg.irisSpecificShader != null && !cfg.irisSpecificShader.isBlank()) {
+      if (!applySpecificShaderPack(cfg.irisSpecificShader)) {
+        CompatDebug.log("Could not apply specific shader '{}'; leaving "
+                            + "shaders disabled to avoid fallback.",
+                        cfg.irisSpecificShader);
+        setShadersEnabled(false);
+        return;
       }
     }
 
-    setShadersEnabled(enable);
+    setShadersEnabled(true);
   }
 
-  private static void applySpecificShaderPack(String packName) {
+  private static boolean applySpecificShaderPack(String packName) {
     try {
-      Object api = net.irisshaders.iris.api.v0.IrisApi.getInstance();
-      Object config = api.getClass().getMethod("getConfig").invoke(api);
-      if (config == null)
-        return;
+      String trimmed = packName == null ? "" : packName.trim();
+      if (trimmed.isEmpty())
+        return false;
 
-      for (String methodName : new String[] {
-               "setShaderPack",
-               "setShaderPackName",
-               "setSelectedShaderPack",
-           }) {
-        try {
-          var method = config.getClass().getMethod(methodName, String.class);
-          method.setAccessible(true);
-          method.invoke(config, packName);
-          return;
-        } catch (NoSuchMethodException ignored) {
-        }
-      }
+      var irisConfig = Iris.getIrisConfig();
+      if (irisConfig == null)
+        return false;
+
+      irisConfig.setShaderPackName(trimmed);
+      irisConfig.save();
+      Iris.reload();
+      return true;
     } catch (Exception e) {
       CompatDebug.log("Could not set specific Iris shader pack '{}': {}",
                       packName, e.getMessage());
     }
+    return false;
   }
 
   public static boolean isIrisLoaded() {

@@ -25,7 +25,7 @@ final class LmsDebugCommand {
 
   private static int set(FabricClientCommandSource source, boolean enabled) {
     CompatDebug.setEnabled(enabled);
-    source.sendFeedback(Component.literal("[LNS] Debug logging: " +
+    source.sendFeedback(Component.literal("[LMS] Debug logging: " +
                                           (enabled ? "§aON§r" : "§cOFF§r")));
     CompatDebug.log("Debug logging toggled {}", enabled ? "ON" : "OFF");
     return 1;
@@ -33,7 +33,7 @@ final class LmsDebugCommand {
 
   private static int status(FabricClientCommandSource source) {
     boolean enabled = CompatDebug.enabled();
-    source.sendFeedback(Component.literal("[LNS] Debug logging is " +
+    source.sendFeedback(Component.literal("[LMS] Debug logging is " +
                                           (enabled ? "§aON§r" : "§cOFF§r")));
     return 1;
   }

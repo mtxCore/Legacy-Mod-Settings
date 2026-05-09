@@ -1,8 +1,13 @@
 package com.mtxcore.legacymodsettings;
 
+import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
-import net.minecraft.client.gui.components.AbstractSliderButton;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
 final class LambdaBetterGrassCompat {
@@ -41,7 +46,8 @@ final class LambdaBetterGrassCompat {
           entries.add(ModSettingsCompat.Entry.customBefore(
               "display held item lighting", "Grass Detail",
               ()
-                  -> new GrassDetailSlider(cfg, values, getMode, setMode, save),
+                  -> createLegacyGrassDetailSlider(mod, cfg, values, getMode,
+                                                   setMode, save),
               ()
                   -> Component.literal("Choose how detailed grass and snow "
                                        + "edges should appear.")));
@@ -66,6 +72,7 @@ final class LambdaBetterGrassCompat {
               boolean next = !RefUtil.invokeBoolean(hasBetterLayer, cfg, true);
               setBetterLayer.invoke(cfg, next);
               RefUtil.invoke(save, cfg);
+              triggerRefresh(mod, cfg);
             },
             ()
                 -> RefUtil.invokeBoolean(hasBetterLayer, cfg, true),
@@ -76,74 +83,117 @@ final class LambdaBetterGrassCompat {
     }
   }
 
-  private static final class GrassDetailSlider extends AbstractSliderButton {
-
-    private final Object cfg;
-    private final Object[] values;
-    private final RefUtil.MethodRef getMode;
-    private final RefUtil.MethodRef setMode;
-    private final RefUtil.MethodRef save;
-
-    private GrassDetailSlider(Object cfg, Object[] values,
-                              RefUtil.MethodRef getMode,
-                              RefUtil.MethodRef setMode,
-                              RefUtil.MethodRef save) {
-      super(0, 0, 200, 20, Component.empty(), 0.0D);
-      this.cfg = cfg;
-      this.values = Arrays.copyOf(values, values.length);
-      this.getMode = getMode;
-      this.setMode = setMode;
-      this.save = save;
-      this.value = modeToSliderValue(getMode.invoke(cfg));
-      updateMessage();
+  private static void triggerRefresh(Object mod, Object cfg) {
+    if (cfg != null) {
+      for (String methodName : new String[] {
+               "reload",
+               "reloadRenderer",
+               "onConfigChanged",
+               "onConfigChange",
+           }) {
+        RefUtil.MethodRef m = RefUtil.method(cfg.getClass(), methodName);
+        if (m != null) {
+          m.invoke(cfg);
+          break;
+        }
+      }
     }
 
-    @Override
-    protected void updateMessage() {
-      Object mode = sliderValueToMode(this.value);
-      this.setMessage(
-          Component.literal("Grass Detail: " + RefUtil.prettyEnumName(mode)));
+    if (mod != null) {
+      for (String methodName : new String[] {
+               "reload",
+               "reloadRenderer",
+               "onConfigChanged",
+               "onConfigChange",
+           }) {
+        RefUtil.MethodRef m = RefUtil.method(mod.getClass(), methodName);
+        if (m != null) {
+          m.invoke(mod);
+          break;
+        }
+      }
     }
 
-    @Override
-    protected void applyValue() {
-      Object next = sliderValueToMode(this.value);
+    Minecraft mc = Minecraft.getInstance();
+    if (mc != null) {
+      if (mc.levelRenderer != null)
+        mc.levelRenderer.allChanged();
+      if (mc.options != null)
+        mc.options.save();
+    }
+  }
+
+  private static Object createLegacyGrassDetailSlider(Object mod, Object cfg,
+                                                      Object[] values,
+                                                      RefUtil.MethodRef getMode,
+                                                      RefUtil.MethodRef setMode,
+                                                      RefUtil.MethodRef save) {
+    Class<?> sliderClass =
+        RefUtil.classForName("wily.legacy.client.screen.LegacySliderButton");
+    if (sliderClass == null)
+      return null;
+
+    Constructor<?> ctor = findCtorByParamCount(sliderClass, 10);
+    if (ctor == null)
+      return null;
+
+    Object initial = getMode.invoke(cfg);
+    if (initial == null)
+      initial = values[0];
+
+    Supplier<List<Object>> valueListSupplier =
+        () -> Arrays.asList(Arrays.copyOf(values, values.length));
+
+    Function<Object, Component> messageGetter = slider
+        -> Component.literal("Grass Detail: " +
+                             RefUtil.prettyEnumName(getLegacySliderObjectValue(
+                                 slider, getMode.invoke(cfg))));
+
+    Function<Object, Tooltip> tooltipSupplier = slider -> null;
+
+    Consumer<Object> onChange = slider -> {
+      Object next = getLegacySliderObjectValue(slider, getMode.invoke(cfg));
       if (next == null)
         return;
       setMode.invoke(cfg, next);
       RefUtil.invoke(save, cfg);
-      this.value = modeToSliderValue(getMode.invoke(cfg));
-      updateMessage();
-    }
+      triggerRefresh(mod, cfg);
+    };
 
-    private double modeToSliderValue(Object mode) {
-      if (values.length <= 1)
-        return 0.0D;
-      int idx = indexOfMode(mode);
-      if (idx < 0)
-        idx = 0;
-      return (double)idx / (double)(values.length - 1);
-    }
+    Supplier<Object> currentSupplier = () -> getMode.invoke(cfg);
 
-    private Object sliderValueToMode(double slider) {
-      if (values.length == 0)
-        return null;
-      int idx = (int)Math.round(slider * (values.length - 1));
-      if (idx < 0)
-        idx = 0;
-      if (idx >= values.length)
-        idx = values.length - 1;
-      return values[idx];
+    try {
+      ctor.setAccessible(true);
+      return ctor.newInstance(0, 0, 200, 16, messageGetter, tooltipSupplier,
+                              initial, valueListSupplier, onChange,
+                              currentSupplier);
+    } catch (Exception e) {
+      CompatDebug.log(
+          "Could not create LegacySliderButton for Grass Detail: {}",
+          e.getMessage());
+      return null;
     }
+  }
 
-    private int indexOfMode(Object mode) {
-      if (mode == null)
-        return -1;
-      for (int i = 0; i < values.length; i++) {
-        if (values[i] == mode || values[i].equals(mode))
-          return i;
-      }
-      return -1;
+  private static Object getLegacySliderObjectValue(Object slider,
+                                                   Object fallback) {
+    if (slider == null)
+      return fallback;
+
+    RefUtil.MethodRef getObjectValue =
+        RefUtil.method(slider.getClass(), "getObjectValue");
+    if (getObjectValue == null)
+      return fallback;
+    Object value = getObjectValue.invoke(slider);
+    return value == null ? fallback : value;
+  }
+
+  private static Constructor<?> findCtorByParamCount(Class<?> type,
+                                                     int paramCount) {
+    for (Constructor<?> ctor : type.getDeclaredConstructors()) {
+      if (ctor.getParameterCount() == paramCount)
+        return ctor;
     }
+    return null;
   }
 }

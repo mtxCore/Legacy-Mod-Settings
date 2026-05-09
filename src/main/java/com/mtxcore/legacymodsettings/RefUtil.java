@@ -5,7 +5,6 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.function.Function;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
@@ -43,6 +42,18 @@ final class RefUtil {
     } catch (Exception ignored) {
       return null;
     }
+  }
+  // For mods that don't have specific config to toggle features on/off
+  enum PersistKey { XAERO_MINIMAP, LOCATOR_LODESTONES, CONTINUITY, ZOOM }
+  static void persistModDesired(Boolean enabled, PersistKey mod) {
+    ModSettingsConfig.mutateAndSave(cfg -> {
+      switch (mod) {
+      case XAERO_MINIMAP -> cfg.xaeroMinimapEnabled = enabled;
+      case LOCATOR_LODESTONES -> cfg.locatorCompassEnabled = enabled;
+      case CONTINUITY -> cfg.continuityConnectedTexturesEnabled = enabled;
+      case ZOOM -> cfg.zoomEnabled = enabled;
+      }
+    });
   }
 
   static void writeField(Object target, Field field, Object value) {
