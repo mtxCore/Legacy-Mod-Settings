@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.mtxcore.unifiedlegacysettings.mixin",
+  "plugin": "com.mtxcore.unifiedlegacysettings.mixin.UnifiedLegacySettingsMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["MixinPanelVListScreen", "MixinLocatorWaypointTracking"],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

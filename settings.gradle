@@ -6,7 +6,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "legacy-mod-settings"
+rootProject.name = "unified-legacy-settings"
 
 gradle.ext.defaultMc = settings.providers
     .gradleProperty("defaultMc")

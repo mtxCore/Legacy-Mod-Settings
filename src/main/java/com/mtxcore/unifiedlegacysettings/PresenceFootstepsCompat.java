@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -8,13 +8,8 @@ import java.util.Locale;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 final class PresenceFootstepsCompat {
-
-  private static final Logger LOGGER =
-      LogManager.getLogger(PresenceFootstepsCompat.class);
 
   private interface ToggleAccessor {
     boolean isEnabled();
@@ -38,8 +33,6 @@ final class PresenceFootstepsCompat {
                       + "skipping toggle.");
       return;
     }
-    CompatDebug.log("PresenceFootstepsCompat: adding Presence Footsteps "
-                    + "toggle to Audio settings");
 
     entries.add(ModSettingsCompat.Entry.toggleBefore(
         "inventory hover focus sound",
@@ -48,14 +41,11 @@ final class PresenceFootstepsCompat {
         ()
             -> {
           boolean next = !toggle.isEnabled();
-          CompatDebug.log("PresenceFootstepsCompat: toggle requested -> {}",
-                          next);
           try {
             toggle.setEnabled(next);
-            CompatDebug.log("PresenceFootstepsCompat: toggle applied -> {}",
-                            next);
           } catch (Throwable t) {
-            LOGGER.error("PresenceFootstepsCompat: error applying toggle", t);
+            UnifiedLegacySettings.LOGGER.error(
+                "[ULS] Presence Footsteps toggle failed", t);
           }
           int removed = removePresenceFootstepsToasts();
           if (removed > 0)
@@ -101,7 +91,8 @@ final class PresenceFootstepsCompat {
         }
       }
     } catch (Throwable t) {
-      LOGGER.error("PresenceFootstepsCompat: error removing toasts", t);
+      UnifiedLegacySettings.LOGGER.error(
+          "[ULS] Failed to remove Presence Footsteps toasts", t);
     }
     return removedCount;
   }
@@ -136,15 +127,11 @@ final class PresenceFootstepsCompat {
 
   private static ToggleAccessor resolveToggleAccessor() {
     ToggleAccessor modern = resolveModernAccessor();
-    if (modern != null) {
-      CompatDebug.log("PresenceFootstepsCompat: resolved modern accessor");
+    if (modern != null)
       return modern;
-    }
     ToggleAccessor legacy = resolveLegacyAccessor();
-    if (legacy != null) {
-      CompatDebug.log("PresenceFootstepsCompat: resolved legacy accessor");
+    if (legacy != null)
       return legacy;
-    }
     CompatDebug.log("PresenceFootstepsCompat: no accessor resolved");
     return null;
   }
@@ -170,45 +157,12 @@ final class PresenceFootstepsCompat {
     RefUtil.MethodRef setDisabled =
         RefUtil.method(cfg.getClass(), "setDisabled", boolean.class);
 
-    CompatDebug.log("PresenceFootstepsCompat: cfg class: {}",
-                    cfg.getClass().getName());
-    try {
-      java.lang.reflect.Field[] declared = cfg.getClass().getDeclaredFields();
-      StringBuilder sb = new StringBuilder();
-      for (int i = 0; i < declared.length; i++) {
-        if (i > 0)
-          sb.append(", ");
-        sb.append(declared[i].getName())
-            .append(":")
-            .append(declared[i].getType().getName());
-      }
-      CompatDebug.log("PresenceFootstepsCompat: cfg declared fields: {}",
-                      sb.toString());
-    } catch (Throwable t) {
-      LOGGER.error("PresenceFootstepsCompat: error listing cfg fields", t);
-    }
-
     try {
       java.lang.reflect.Field disabledField =
           RefUtil.field(cfg.getClass(), "disabled");
-      if (disabledField == null) {
-        CompatDebug.log(
-            "PresenceFootstepsCompat: 'disabled' field not found on the cfg");
-      } else {
-        CompatDebug.log(
-            "PresenceFootstepsCompat: found disabled field: {} type {}",
-            disabledField.getName(), disabledField.getType().getName());
-      }
 
       if (disabledField != null) {
         Object disabledSetting = RefUtil.readField(cfg, disabledField);
-        if (disabledSetting == null) {
-          CompatDebug.log("PresenceFootstepsCompat: disabledSetting read null");
-        } else {
-          CompatDebug.log("PresenceFootstepsCompat: disabledSetting class: {}",
-                          disabledSetting.getClass().getName());
-        }
-
         RefUtil.MethodRef settingSet = null;
         RefUtil.MethodRef settingGet =
             disabledSetting == null
@@ -250,12 +204,6 @@ final class PresenceFootstepsCompat {
         RefUtil.MethodRef getEngine =
             RefUtil.method(mod.getClass(), "getEngine");
 
-        CompatDebug.log(
-            "PresenceFootstepsCompat: quiet-path availability -> "
-                + "settingSet={} settingGet={} saveMethod={} getEngine={}",
-            settingSet != null, settingGet != null, saveMethod != null,
-            getEngine != null);
-
         if (settingSet != null && saveMethod != null && getEngine != null) {
           final RefUtil.MethodRef finalSettingSet = settingSet;
           final RefUtil.MethodRef finalSettingGet = settingGet;
@@ -266,8 +214,6 @@ final class PresenceFootstepsCompat {
           final RefUtil.MethodRef finalGetEnabled = getEnabled;
           final Object finalMod = mod;
 
-          CompatDebug.log("PresenceFootstepsCompat: using modern quiet "
-                          + "accessor (Setting write + save + reload)");
           return new ToggleAccessor() {
             @Override
             public boolean isEnabled() {
@@ -297,15 +243,11 @@ final class PresenceFootstepsCompat {
         }
       }
     } catch (Throwable t) {
-      LOGGER.error("PresenceFootstepsCompat: error resolving quiet accessor",
-                   t);
+      CompatDebug.log("PresenceFootstepsCompat: quiet accessor failed", t);
     }
 
     if (getEnabled == null || setDisabled == null)
       return null;
-
-    CompatDebug.log(
-        "PresenceFootstepsCompat: using modern API accessor (setDisabled)");
 
     return new ToggleAccessor() {
       @Override
@@ -331,9 +273,6 @@ final class PresenceFootstepsCompat {
       return null;
 
     RefUtil.MethodRef save = RefUtil.method(cfg.getClass(), "save");
-
-    CompatDebug.log(
-        "PresenceFootstepsCompat: using legacy PFConfig.INSTANCE accessor");
 
     return new ToggleAccessor() {
       @Override

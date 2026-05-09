@@ -1,10 +1,11 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
@@ -23,7 +24,10 @@ public final class ModSettingsConfig {
 
   private static final Path FILE =
       FabricLoader.getInstance().getConfigDir().resolve(
-          "legacy_mod_settings.json");
+          "unified_legacy_settings.json");
+  private static final Path PREVIOUS_FILE =
+      FabricLoader.getInstance().getConfigDir().resolve(
+          String.join("_", "legacy", "mod", "settings") + ".json");
 
   private static volatile ModSettingsConfig instance;
 
@@ -90,21 +94,27 @@ public final class ModSettingsConfig {
   }
 
   private static ModSettingsConfig load() {
-    if (!Files.exists(FILE)) {
+    Path source = Files.exists(FILE) ? FILE : PREVIOUS_FILE;
+    if (!Files.exists(source)) {
       ModSettingsConfig cfg = new ModSettingsConfig();
       cfg.saveToFile();
       return cfg;
     }
     try {
-      ModSettingsConfig cfg =
-          GSON.fromJson(Files.newBufferedReader(FILE), ModSettingsConfig.class);
+      ModSettingsConfig cfg;
+      try (Reader reader = Files.newBufferedReader(source)) {
+        cfg = GSON.fromJson(reader, ModSettingsConfig.class);
+      }
       if (cfg == null)
         return new ModSettingsConfig();
-      cfg.sanitise();
+      boolean migrated = !source.equals(FILE);
+      boolean changed = cfg.sanitise();
+      if (migrated || changed)
+        cfg.saveToFile();
       return cfg;
     } catch (IOException | JsonSyntaxException e) {
-      LegacyModSettings.LOGGER.error(
-          "[Legacy Mod Settings] Failed to load config, using defaults", e);
+      UnifiedLegacySettings.LOGGER.error(
+          "[ULS] Failed to load config, using defaults", e);
       return new ModSettingsConfig();
     }
   }
@@ -116,15 +126,21 @@ public final class ModSettingsConfig {
       Files.createDirectories(FILE.getParent());
       Files.writeString(FILE, GSON.toJson(this));
     } catch (IOException e) {
-      LegacyModSettings.LOGGER.error(
-          "[Legacy Mod Settings] Failed to save config", e);
+      UnifiedLegacySettings.LOGGER.error(
+          "[ULS] Failed to save config", e);
     }
   }
 
-  private void sanitise() {
-    if (irisShaderMode == null)
+  private boolean sanitise() {
+    boolean changed = false;
+    if (irisShaderMode == null) {
       irisShaderMode = IrisShaderMode.LAST_USED;
-    if (irisSpecificShader == null)
+      changed = true;
+    }
+    if (irisSpecificShader == null) {
       irisSpecificShader = "";
+      changed = true;
+    }
+    return changed;
   }
 }

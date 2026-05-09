@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;

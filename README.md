@@ -1,7 +1,6 @@
 # Unified Legacy Settings
 
 Unified Legacy Settings adds optional mod toggles directly to Legacy4J menu screens.
-Each integration is soft-dependent: if a target mod is missing, that entry is skipped. The mod ensures that other mods have native-LCE-feeling settings, as if L4J had added them itself.
 
 ## Integrations
 
@@ -26,7 +25,7 @@ Each integration is soft-dependent: if a target mod is missing, that entry is sk
 ## Configuration
 
 Open Mod Menu -> Unified Legacy Settings -> Config.
-Settings are written to `config/legacy_mod_settings.json`.
+Settings are written to `config/unified_legacy_settings.json`.
 
 ## Build
 
@@ -52,7 +51,7 @@ Integrated mods remain optional.
 
 ## Adding an Integration
 
-1. Add a compat class in `src/main/java/com/mtxcore/legacymodsettings`.
+1. Add a compat class in `src/main/java/com/mtxcore/unifiedlegacysettings`.
 2. Add the config toggle in `ModSettingsConfig`.
 3. Register the entries in `ModSettingsCompat`.
 4. Add the config UI toggle in `ClothConfigScreenFactory`.

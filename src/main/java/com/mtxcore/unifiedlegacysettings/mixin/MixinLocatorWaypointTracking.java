@@ -1,6 +1,6 @@
-package com.mtxcore.legacymodsettings.mixin;
+package com.mtxcore.unifiedlegacysettings.mixin;
 
-import com.mtxcore.legacymodsettings.LocatorLodestonesCompat;
+import com.mtxcore.unifiedlegacysettings.LocatorLodestonesCompat;
 import java.util.Collections;
 import java.util.List;
 import net.minecraft.world.entity.player.Player;
@@ -14,9 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MixinLocatorWaypointTracking {
 
   @Inject(method = "getWaypointsFromPlayer", at = @At("HEAD"),
-          cancellable = true, remap = true)
+          cancellable = true, remap = false)
   private static void
-  legacyModSettings$blockWaypointsFromPlayer(
+  unifiedLegacySettings$blockWaypointsFromPlayer(
       Player player, CallbackInfoReturnable<List<?>> cir) {
     // Short-circuit at HEAD so disabled locator mode never seeds fresh player
     // waypoints.

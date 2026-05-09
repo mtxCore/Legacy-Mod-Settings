@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;

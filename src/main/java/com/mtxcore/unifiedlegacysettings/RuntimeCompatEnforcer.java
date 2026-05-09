@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 

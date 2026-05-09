@@ -43,7 +43,6 @@ def versions = [
         cloth:          "26.1.154",
         modmenu:        "18.0.0-alpha.8",
         java:           25,
-        javaHome:       "/usr/lib/jvm/java-25-openjdk",
         nonObfuscated:  true
     ],
 ]
@@ -68,16 +67,15 @@ if (isNonObfuscated) {
     apply plugin: "net.fabricmc.fabric-loom-remap"
 }
 
-// MC 26.x needs a command API shim while older versions use the shared source set only.
 if (isNonObfuscated) {
     sourceSets.main.java.srcDirs += "src/main/java-26"
 }
 
-group   = "com.mtxcore.legacymodsettings"
+group   = "com.mtxcore.unifiedlegacysettings"
 version = "${mod_version}+mc${targetMc}"
 
 base {
-    archivesName = "legacy-mod-settings"
+    archivesName = "unified-legacy-settings"
 }
 
 repositories {
@@ -150,7 +148,6 @@ tasks.register("buildAll") {
     group       = "build"
     description = "Builds a jar for every supported Minecraft version."
 
-    // ExecOperations is the cache-safe replacement for project.exec in modern Gradle.
     def execOps = services.get(org.gradle.process.ExecOperations)
 
     doLast {
@@ -164,8 +161,12 @@ tasks.register("buildAll") {
 
             def vmap = versions[mc]
             def cmdLine = [gradleCmd, "build", "-Pmc=${mc}", "--console=plain"]
-            if (vmap.javaHome) {
-                cmdLine += "-Dorg.gradle.java.home=${vmap.javaHome}"
+            def mcPropertyName = "mc${mc.replace('.', '_')}JavaHome"
+            def javaHome = findProperty(mcPropertyName)
+                ?: findProperty("java${vmap.java}Home")
+                ?: System.getenv("JAVA${vmap.java}_HOME")
+            if (javaHome) {
+                cmdLine += "-Dorg.gradle.java.home=${javaHome}"
             }
 
             def result = execOps.exec {

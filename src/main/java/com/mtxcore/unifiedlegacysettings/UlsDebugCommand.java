@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 
@@ -6,14 +6,14 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.network.chat.Component;
 
-final class LmsDebugCommand {
+final class UlsDebugCommand {
 
-  private LmsDebugCommand() {}
+  private UlsDebugCommand() {}
 
   static void register() {
     ClientCommandRegistrationCallback.EVENT.register(
         (dispatcher, registryAccess)
-            -> dispatcher.register(literal("lms-debug")
+            -> dispatcher.register(literal("uls-debug")
                                        .executes(ctx -> status(ctx.getSource()))
                                        .then(literal("on").executes(
                                            ctx -> set(ctx.getSource(), true)))
@@ -25,7 +25,7 @@ final class LmsDebugCommand {
 
   private static int set(FabricClientCommandSource source, boolean enabled) {
     CompatDebug.setEnabled(enabled);
-    source.sendFeedback(Component.literal("[LMS] Debug logging: " +
+    source.sendFeedback(Component.literal("[ULS] Debug logging: " +
                                           (enabled ? "§aON§r" : "§cOFF§r")));
     CompatDebug.log("Debug logging toggled {}", enabled ? "ON" : "OFF");
     return 1;
@@ -33,7 +33,7 @@ final class LmsDebugCommand {
 
   private static int status(FabricClientCommandSource source) {
     boolean enabled = CompatDebug.enabled();
-    source.sendFeedback(Component.literal("[LMS] Debug logging is " +
+    source.sendFeedback(Component.literal("[ULS] Debug logging is " +
                                           (enabled ? "§aON§r" : "§cOFF§r")));
     return 1;
   }

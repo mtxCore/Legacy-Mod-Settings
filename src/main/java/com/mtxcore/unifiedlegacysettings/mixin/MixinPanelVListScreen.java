@@ -1,9 +1,9 @@
-package com.mtxcore.legacymodsettings.mixin;
+package com.mtxcore.unifiedlegacysettings.mixin;
 
-import com.mtxcore.legacymodsettings.CompatDebug;
-import com.mtxcore.legacymodsettings.LegacyModSettings;
-import com.mtxcore.legacymodsettings.ModSettingsCompat;
-import com.mtxcore.legacymodsettings.ModSettingsConfig;
+import com.mtxcore.unifiedlegacysettings.CompatDebug;
+import com.mtxcore.unifiedlegacysettings.UnifiedLegacySettings;
+import com.mtxcore.unifiedlegacysettings.ModSettingsCompat;
+import com.mtxcore.unifiedlegacysettings.ModSettingsConfig;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collections;
@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -27,29 +26,25 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(targets = "wily.legacy.client.screen.PanelVListScreen", remap = false)
-public abstract class MixinHelpAndOptionsScreen {
-
-  @Unique
-  private static final AtomicBoolean legacyModSettings$constructorProbeLogged =
-      new AtomicBoolean(false);
+public abstract class MixinPanelVListScreen {
 
   @Unique
   private static final Map<Object, EnumSet<ModSettingsCompat.Section>>
-      legacyModSettings$injectedByList =
+      unifiedLegacySettings$injectedByList =
           Collections.synchronizedMap(new WeakHashMap<>());
 
   @Inject(method = "renderableVListInit", at = @At("RETURN"), remap = false)
-  private void legacyModSettings$injectNativeSettings(CallbackInfo ci) {
-    legacyModSettings$injectNativeSettingsImpl();
+  private void unifiedLegacySettings$injectNativeSettings(CallbackInfo ci) {
+    unifiedLegacySettings$injectNativeSettingsImpl();
   }
 
   @Inject(method = "init", at = @At("RETURN"), remap = false, require = 0)
-  private void legacyModSettings$injectNativeSettingsFallback(CallbackInfo ci) {
-    legacyModSettings$injectNativeSettingsImpl();
+  private void unifiedLegacySettings$injectNativeSettingsFallback(CallbackInfo ci) {
+    unifiedLegacySettings$injectNativeSettingsImpl();
   }
 
   @Unique
-  private void legacyModSettings$injectNativeSettingsImpl() {
+  private void unifiedLegacySettings$injectNativeSettingsImpl() {
     String className = this.getClass().getName();
     if (!className.startsWith("wily.legacy.client.screen.OptionsScreen"))
       return;
@@ -67,12 +62,12 @@ public abstract class MixinHelpAndOptionsScreen {
       List<Object> renderables =
           (List<Object>)renderablesField.get(renderableVList);
 
-      String title = legacyModSettings$readScreenTitle(this);
+      String title = unifiedLegacySettings$readScreenTitle(this);
       ModSettingsCompat.Section section =
           ModSettingsCompat.detectSection(title, className, renderables);
       if (ModSettingsConfig.get().debugCompatLogs) {
-        LegacyModSettings.LOGGER.info(
-            "[Legacy Mod Settings] Mixin hook fired for class={} title='{}' "
+        UnifiedLegacySettings.LOGGER.info(
+            "[ULS] Mixin hook fired for class={} title='{}' "
                 + "section={} renderables={}",
             className, title, section, renderables.size());
       }
@@ -81,7 +76,7 @@ public abstract class MixinHelpAndOptionsScreen {
         return;
       }
 
-      if (legacyModSettings$alreadyInjected(renderableVList, section)) {
+      if (unifiedLegacySettings$alreadyInjected(renderableVList, section)) {
         return;
       }
 
@@ -94,17 +89,17 @@ public abstract class MixinHelpAndOptionsScreen {
       int added = 0;
 
       for (ModSettingsCompat.Entry entry : entries) {
-        if (legacyModSettings$containsEntry(renderables, entry)) {
+        if (unifiedLegacySettings$containsEntry(renderables, entry)) {
           continue;
         }
 
         Object widget;
         if (entry.kind() == ModSettingsCompat.WidgetKind.TOGGLE) {
-          widget = legacyModSettings$createTickBox(
+          widget = unifiedLegacySettings$createTickBox(
               entry.label(), entry.onActivate(), entry.selected(),
               entry.tooltip());
         } else if (entry.kind() == ModSettingsCompat.WidgetKind.CYCLE) {
-          widget = legacyModSettings$createCycleButton(entry.label(),
+          widget = unifiedLegacySettings$createCycleButton(entry.label(),
                                                        entry.onActivate());
         } else {
           widget =
@@ -113,48 +108,40 @@ public abstract class MixinHelpAndOptionsScreen {
         if (widget == null)
           continue;
 
-        legacyModSettings$applyTooltip(widget, entry.tooltip());
+        unifiedLegacySettings$applyTooltip(widget, entry.tooltip());
 
-        Component widgetMessage = legacyModSettings$getWidgetMessage(widget);
+        Component widgetMessage = unifiedLegacySettings$getWidgetMessage(widget);
         if (widgetMessage != null &&
-            legacyModSettings$containsMessage(renderables,
+            unifiedLegacySettings$containsMessage(renderables,
                                               widgetMessage.getString())) {
           continue;
         }
 
-        int insertIndex = legacyModSettings$findInsertIndex(
+        int insertIndex = unifiedLegacySettings$findInsertIndex(
             renderables, entry.insertBeforeText());
         renderables.add(insertIndex, widget);
         added++;
       }
 
       if (added > 0) {
-        legacyModSettings$reloadUI(renderableVList);
+        unifiedLegacySettings$reloadUI(renderableVList);
       }
 
       CompatDebug.log("Injected compat entries in {} as {}", className,
                       section);
     } catch (Exception e) {
-      LegacyModSettings.LOGGER.error(
-          "[Legacy Mod Settings] Failed to inject options", e);
-    }
-  }
-
-  @Inject(method = "<init>", at = @At("RETURN"), remap = false, require = 0)
-  private void legacyModSettings$constructorProbe(CallbackInfo ci) {
-    if (legacyModSettings$constructorProbeLogged.compareAndSet(false, true)) {
-      CompatDebug.log("PanelVListScreen mixin constructor probe fired "
-                      + "(mixin is active)");
+      UnifiedLegacySettings.LOGGER.error(
+          "[ULS] Failed to inject options", e);
     }
   }
 
   @Unique
   private static boolean
-  legacyModSettings$alreadyInjected(Object renderableVList,
+  unifiedLegacySettings$alreadyInjected(Object renderableVList,
                                     ModSettingsCompat.Section section) {
-    synchronized (legacyModSettings$injectedByList) {
+    synchronized (unifiedLegacySettings$injectedByList) {
       EnumSet<ModSettingsCompat.Section> injected =
-          legacyModSettings$injectedByList.computeIfAbsent(
+          unifiedLegacySettings$injectedByList.computeIfAbsent(
               renderableVList,
               ignored -> EnumSet.noneOf(ModSettingsCompat.Section.class));
       if (injected.contains(section)) {
@@ -166,7 +153,7 @@ public abstract class MixinHelpAndOptionsScreen {
   }
 
   @Unique
-  private static int legacyModSettings$findInsertIndex(List<Object> renderables,
+  private static int unifiedLegacySettings$findInsertIndex(List<Object> renderables,
                                                        String anchorText) {
     if (anchorText == null || anchorText.isBlank()) {
       return renderables.size();
@@ -185,10 +172,10 @@ public abstract class MixinHelpAndOptionsScreen {
       }
       for (int index = 0; index < renderables.size(); index++) {
         Component msg =
-            legacyModSettings$getWidgetMessage(renderables.get(index));
+            unifiedLegacySettings$getWidgetMessage(renderables.get(index));
         if (msg == null)
           continue;
-        if (legacyModSettings$componentMatches(msg, needle)) {
+        if (unifiedLegacySettings$componentMatches(msg, needle)) {
           return insertAfter ? Math.min(index + 1, renderables.size()) : index;
         }
       }
@@ -198,13 +185,13 @@ public abstract class MixinHelpAndOptionsScreen {
 
   @Unique
   private static boolean
-  legacyModSettings$containsMessage(List<Object> renderables, String text) {
+  unifiedLegacySettings$containsMessage(List<Object> renderables, String text) {
     if (text == null || text.isBlank())
       return false;
     String needle = text.toLowerCase(Locale.ROOT);
     for (Object renderable : renderables) {
-      Component msg = legacyModSettings$getWidgetMessage(renderable);
-      if (msg != null && legacyModSettings$componentMatches(msg, needle)) {
+      Component msg = unifiedLegacySettings$getWidgetMessage(renderable);
+      if (msg != null && unifiedLegacySettings$componentMatches(msg, needle)) {
         return true;
       }
     }
@@ -213,7 +200,7 @@ public abstract class MixinHelpAndOptionsScreen {
 
   @Unique
   private static boolean
-  legacyModSettings$componentMatches(Component message, String loweredNeedle) {
+  unifiedLegacySettings$componentMatches(Component message, String loweredNeedle) {
     String resolved = message.getString();
     if (resolved != null &&
         resolved.toLowerCase(Locale.ROOT).contains(loweredNeedle)) {
@@ -226,10 +213,10 @@ public abstract class MixinHelpAndOptionsScreen {
 
   @Unique
   private static boolean
-  legacyModSettings$containsEntry(List<Object> renderables,
+  unifiedLegacySettings$containsEntry(List<Object> renderables,
                                   ModSettingsCompat.Entry entry) {
     if (entry.dedupeText() != null && !entry.dedupeText().isBlank() &&
-        legacyModSettings$containsMessage(renderables, entry.dedupeText())) {
+        unifiedLegacySettings$containsMessage(renderables, entry.dedupeText())) {
       return true;
     }
 
@@ -239,7 +226,7 @@ public abstract class MixinHelpAndOptionsScreen {
       if (labelSupplier != null) {
         Component label = labelSupplier.get();
         if (label != null &&
-            legacyModSettings$containsMessage(renderables, label.getString())) {
+            unifiedLegacySettings$containsMessage(renderables, label.getString())) {
           return true;
         }
       }
@@ -250,37 +237,37 @@ public abstract class MixinHelpAndOptionsScreen {
 
   @Unique
   private static Object
-  legacyModSettings$createTickBox(Supplier<Component> label,
+  unifiedLegacySettings$createTickBox(Supplier<Component> label,
                                   Runnable onActivate, BooleanSupplier selected,
                                   Supplier<Component> tooltipText) {
     try {
       Class<?> tickBoxClass =
           Class.forName("wily.legacy.client.screen.TickBox");
       Constructor<?> ctor =
-          legacyModSettings$findCtorByParamCount(tickBoxClass, 8);
+          unifiedLegacySettings$findCtorByParamCount(tickBoxClass, 8);
       if (ctor == null) {
-        LegacyModSettings.LOGGER.error(
-            "[Legacy Mod Settings] TickBox constructor not found");
+        UnifiedLegacySettings.LOGGER.error(
+            "[ULS] TickBox constructor not found");
         return null;
       }
 
       Function<Boolean, Tooltip> tooltip =
-          ignored -> legacyModSettings$createTooltip(tooltipText);
+          ignored -> unifiedLegacySettings$createTooltip(tooltipText);
       Consumer<Object> press = ignored -> onActivate.run();
       Function<Boolean, Component> labelFn = ignored -> label.get();
 
       return ctor.newInstance(0, 0, 200, selected.getAsBoolean(), labelFn,
                               tooltip, press, selected);
     } catch (Exception e) {
-      LegacyModSettings.LOGGER.error(
-          "[Legacy Mod Settings] Could not create TickBox", e);
+      UnifiedLegacySettings.LOGGER.error(
+          "[ULS] Could not create TickBox", e);
       return null;
     }
   }
 
   @Unique
   private static Button
-  legacyModSettings$createCycleButton(Supplier<Component> label,
+  unifiedLegacySettings$createCycleButton(Supplier<Component> label,
                                       Runnable onActivate) {
     return Button
         .builder(label.get(),
@@ -294,7 +281,7 @@ public abstract class MixinHelpAndOptionsScreen {
 
   @Unique
   private static Tooltip
-  legacyModSettings$createTooltip(Supplier<Component> tooltipText) {
+  unifiedLegacySettings$createTooltip(Supplier<Component> tooltipText) {
     if (tooltipText == null)
       return null;
     Component component = tooltipText.get();
@@ -303,9 +290,9 @@ public abstract class MixinHelpAndOptionsScreen {
 
   @Unique
   private static void
-  legacyModSettings$applyTooltip(Object widget,
+  unifiedLegacySettings$applyTooltip(Object widget,
                                  Supplier<Component> tooltipText) {
-    Tooltip tooltip = legacyModSettings$createTooltip(tooltipText);
+    Tooltip tooltip = unifiedLegacySettings$createTooltip(tooltipText);
     if (tooltip == null)
       return;
 
@@ -318,7 +305,7 @@ public abstract class MixinHelpAndOptionsScreen {
   }
 
   @Unique
-  private static Component legacyModSettings$getWidgetMessage(Object widget) {
+  private static Component unifiedLegacySettings$getWidgetMessage(Object widget) {
     try {
       return (Component)widget.getClass()
           .getMethod("getMessage")
@@ -327,7 +314,7 @@ public abstract class MixinHelpAndOptionsScreen {
     }
     try {
       Field f =
-          legacyModSettings$findFieldInHierarchy(widget.getClass(), "message");
+          unifiedLegacySettings$findFieldInHierarchy(widget.getClass(), "message");
       if (f != null) {
         f.setAccessible(true);
         Object val = f.get(widget);
@@ -348,7 +335,7 @@ public abstract class MixinHelpAndOptionsScreen {
   }
 
   @Unique
-  private static String legacyModSettings$readScreenTitle(Object screen) {
+  private static String unifiedLegacySettings$readScreenTitle(Object screen) {
     try {
       Object title = screen.getClass().getMethod("getTitle").invoke(screen);
       if (title instanceof Component c) {
@@ -360,7 +347,7 @@ public abstract class MixinHelpAndOptionsScreen {
   }
 
   @Unique
-  private static Field legacyModSettings$findFieldInHierarchy(Class<?> cls,
+  private static Field unifiedLegacySettings$findFieldInHierarchy(Class<?> cls,
                                                               String name) {
     while (cls != null) {
       try {
@@ -373,9 +360,9 @@ public abstract class MixinHelpAndOptionsScreen {
   }
 
   @Unique
-  private static void legacyModSettings$reloadUI(Object renderableVList) {
+  private static void unifiedLegacySettings$reloadUI(Object renderableVList) {
     try {
-      Field accessorField = legacyModSettings$findFieldInHierarchy(
+      Field accessorField = unifiedLegacySettings$findFieldInHierarchy(
           renderableVList.getClass(), "accessor");
       if (accessorField == null)
         return;
@@ -393,7 +380,7 @@ public abstract class MixinHelpAndOptionsScreen {
 
   @Unique
   private static Constructor<?>
-  legacyModSettings$findCtorByParamCount(Class<?> cls, int count) {
+  unifiedLegacySettings$findCtorByParamCount(Class<?> cls, int count) {
     for (Constructor<?> c : cls.getConstructors()) {
       if (c.getParameterCount() == count)
         return c;

@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import java.lang.reflect.Field;
@@ -140,8 +140,7 @@ final class ZoomCompat {
     Boolean desired = desiredZoomState();
     if (desired == null)
       return;
-    // Appears non-op but don't change because it persists the desired state for
-    // future reference in getZoomEnabled()
+
     zoomDesired = desired;
 
     Object cfg = RefUtil.staticField(

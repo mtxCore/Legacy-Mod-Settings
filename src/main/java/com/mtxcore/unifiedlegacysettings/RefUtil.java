@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -43,8 +43,13 @@ final class RefUtil {
       return null;
     }
   }
-  // For mods that don't have specific config to toggle features on/off
-  enum PersistKey { XAERO_MINIMAP, LOCATOR_LODESTONES, CONTINUITY, ZOOM }
+  enum PersistKey {
+    XAERO_MINIMAP,
+    LOCATOR_LODESTONES,
+    CONTINUITY,
+    ZOOM,
+  }
+
   static void persistModDesired(Boolean enabled, PersistKey mod) {
     ModSettingsConfig.mutateAndSave(cfg -> {
       switch (mod) {

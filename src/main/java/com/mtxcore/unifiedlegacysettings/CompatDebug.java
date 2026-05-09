@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 public final class CompatDebug {
 
@@ -15,6 +15,6 @@ public final class CompatDebug {
   public static void log(String message, Object... args) {
     if (!enabled())
       return;
-    LegacyModSettings.LOGGER.info("[LNS Debug] " + message, args);
+    UnifiedLegacySettings.LOGGER.info("[ULS Debug] " + message, args);
   }
 }

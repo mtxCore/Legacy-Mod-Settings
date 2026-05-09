@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "id": "legacy-mod-settings",
+  "id": "unified-legacy-settings",
   "version": "${version}",
   "name": "Unified Legacy Settings",
   "icon": "icon.png",
   "description": "Integrates popular client mods natively into Legacy4J settings menus, as if 4J Studios had added them themselves. (Unified Legacy Settings)",
   "authors": ["mtxcore"],
   "contact": {
-    "sources": "https://github.com/mtxcore/legacy-mod-settings"
+    "sources": "https://github.com/mtxcore/unified-legacy-settings"
   },
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
-    "client": ["com.mtxcore.legacymodsettings.LegacyModSettings"],
-    "modmenu": ["com.mtxcore.legacymodsettings.ModMenuIntegration"]
+    "client": ["com.mtxcore.unifiedlegacysettings.UnifiedLegacySettings"],
+    "modmenu": ["com.mtxcore.unifiedlegacysettings.ModMenuIntegration"]
   },
-  "mixins": ["legacy_mod_settings.mixins.json"],
+  "mixins": ["unified_legacy_settings.mixins.json"],
   "depends": {
     "fabricloader": ">=${fabric_loader_version}",
     "fabric-api": ">=${fabric_api_version}",

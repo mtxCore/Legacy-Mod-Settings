@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

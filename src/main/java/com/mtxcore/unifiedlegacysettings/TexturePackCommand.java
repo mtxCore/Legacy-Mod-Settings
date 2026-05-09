@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
@@ -10,11 +10,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -31,7 +32,7 @@ final class TexturePackCommand {
     ClientCommandRegistrationCallback.EVENT.register(
         (dispatcher, registryAccess)
             -> dispatcher.register(
-                literal("lms-pack")
+                literal("uls-pack")
                     .then(argument("pack_id", StringArgumentType.string())
                               .then(literal("on").executes(
                                   ctx
@@ -52,17 +53,14 @@ final class TexturePackCommand {
                                                 ctx, "pack_id")))))));
   }
 
-  private static int toggle(net.fabricmc.fabric.api.client.command.v2
-                                .FabricClientCommandSource source,
-                            String packId) {
+  private static int toggle(FabricClientCommandSource source, String packId) {
     Minecraft mc = Minecraft.getInstance();
     Options options = mc.options;
     boolean enabled = isPackEnabled(options, packId);
     return apply(source, packId, !enabled, false);
   }
 
-  private static int apply(net.fabricmc.fabric.api.client.command.v2
-                               .FabricClientCommandSource source,
+  private static int apply(FabricClientCommandSource source,
                            String packId, boolean enable) {
     return apply(source, packId, enable, false);
   }
@@ -71,8 +69,7 @@ final class TexturePackCommand {
     return apply(null, packId, enable, true) > 0;
   }
 
-  private static int apply(net.fabricmc.fabric.api.client.command.v2
-                               .FabricClientCommandSource source,
+  private static int apply(FabricClientCommandSource source,
                            String packId, boolean enable, boolean silent) {
     Minecraft mc = Minecraft.getInstance();
     if (mc == null || mc.options == null)
@@ -179,7 +176,7 @@ final class TexturePackCommand {
 
       boolean changed = false;
       for (var entry : obj.entrySet()) {
-        String key = entry.getKey().toLowerCase();
+        String key = entry.getKey().toLowerCase(Locale.ROOT);
         if ("order".equals(key))
           continue;
         JsonElement value = entry.getValue();
@@ -196,7 +193,7 @@ final class TexturePackCommand {
         Files.writeString(file, GSON.toJson(obj));
       }
       return changed;
-    } catch (IOException e) {
+    } catch (Exception e) {
       CompatDebug.log("Could not update Legacy4J pack file {}", file, e);
       return false;
     }

@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -94,8 +94,7 @@ public class ModSettingsCompat {
     if (lowerTitle.equals("audio"))
       return Section.AUDIO;
 
-    // Final fallback uses known option labels because class/title names differ
-    // across Legacy4J revisions.
+    // Final fallback uses known option labels
     if (RefUtil.hasAnyMessageText(renderables, "fullscreen"))
       return Section.ADVANCED_GRAPHICS;
     if (RefUtil.hasAnyMessageText(renderables, "smooth lighting",

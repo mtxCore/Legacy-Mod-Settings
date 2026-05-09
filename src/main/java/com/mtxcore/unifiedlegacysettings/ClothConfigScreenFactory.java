@@ -1,4 +1,4 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ final class ClothConfigScreenFactory {
     ConfigBuilder builder =
         ConfigBuilder.create()
             .setParentScreen(parent)
-            .setTitle(Component.literal("Legacy Mod Settings"))
+            .setTitle(Component.literal("Unified Legacy Settings"))
             .setSavingRunnable(ModSettingsConfig::save);
 
     ConfigEntryBuilder eb = builder.entryBuilder();

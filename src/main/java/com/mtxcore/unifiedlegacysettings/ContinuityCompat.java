@@ -1,6 +1,8 @@
-package com.mtxcore.legacymodsettings;
+package com.mtxcore.unifiedlegacysettings;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -81,9 +83,7 @@ final class ContinuityCompat {
             RefUtil.persistModDesired(next, RefUtil.PersistKey.CONTINUITY);
             applyConnectedTexturesConfig(next);
             CompatDebug.log("Connected Textures toggle -> {}", next);
-            for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
-              TexturePackCommand.applySilently(packId, next);
-            }
+            applyConnectedTexturePacks(next);
           }
         },
         ()
@@ -134,19 +134,65 @@ final class ContinuityCompat {
       }
     }
 
-    boolean packsNeedUpdate = false;
-    for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
-      if (isPackEnabled(packId) != connectedTexturesDesired) {
-        packsNeedUpdate = true;
-        break;
+    if (!connectedTexturesDesired && isAnyCandidatePackEnabled()) {
+      applyConnectedTexturePacks(false);
+    } else if (connectedTexturesDesired &&
+               !isAnyCandidatePackEnabled()) {
+      applyConnectedTexturePacks(true);
+    }
+  }
+
+  private static void applyConnectedTexturePacks(boolean enabled) {
+    if (!enabled) {
+      for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
+        TexturePackCommand.applySilently(packId, false);
+      }
+      return;
+    }
+
+    String packId = resolveAvailableConnectedTexturePack();
+    if (packId == null) {
+      CompatDebug.log("Continuity connected texture pack not found; skipping "
+                      + "resource-pack update");
+      return;
+    }
+
+    TexturePackCommand.applySilently(packId, true);
+    for (String candidate : CONNECTED_TEXTURE_PACK_CANDIDATES) {
+      if (!candidate.equals(packId)) {
+        TexturePackCommand.applySilently(candidate, false);
       }
     }
-    if (!packsNeedUpdate)
-      return;
+  }
 
+  private static String resolveAvailableConnectedTexturePack() {
     for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
-      TexturePackCommand.applySilently(packId, connectedTexturesDesired);
+      if (isPackEnabled(packId))
+        return packId;
     }
+
+    Set<String> availableIds = availableResourcePackIds();
+    for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
+      if (availableIds.contains(packId))
+        return packId;
+    }
+    return null;
+  }
+
+  private static Set<String> availableResourcePackIds() {
+    Minecraft mc = Minecraft.getInstance();
+    if (mc == null)
+      return Set.of();
+
+    return new HashSet<>(mc.getResourcePackRepository().getAvailableIds());
+  }
+
+  private static boolean isAnyCandidatePackEnabled() {
+    for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
+      if (isPackEnabled(packId))
+        return true;
+    }
+    return false;
   }
 
   private static boolean isPackEnabled(String packId) {
