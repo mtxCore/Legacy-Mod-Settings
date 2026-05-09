@@ -17,24 +17,24 @@
   },
   "mixins": ["legacy_mod_settings.mixins.json"],
   "depends": {
-    "fabricloader": ">=0.16",
-    "fabric-api": "*",
-    "minecraft": "*",
-    "legacy": "*",
-    "cloth-config2": "*"
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": ">=${fabric_api_version}",
+    "minecraft": "${mc_version}",
+    "legacy": ">=0",
+    "cloth-config2": ">=${cloth_config_version}"
   },
   "suggests": {
-    "modmenu": "*",
-    "iris": "*",
-    "lambdynlights": "*",
-    "lambdabettergrass": "*",
-    "continuity": "*",
-    "notenoughanimations": "*",
-    "chat_heads": "*",
-    "locator_lodestones": "*",
-    "bobby": "*",
-    "zoomify": "*",
-    "presencefootsteps": "*",
-    "xaerominimap": "*"
+    "modmenu": ">=${modmenu_version}",
+    "iris": ">=${iris_version}",
+    "lambdynlights": ">=0",
+    "lambdabettergrass": ">=0",
+    "continuity": ">=0",
+    "notenoughanimations": ">=0",
+    "chat_heads": ">=0",
+    "locator_lodestones": ">=0",
+    "bobby": ">=0",
+    "zoomify": ">=0",
+    "presencefootsteps": ">=0",
+    "xaerominimap": ">=0"
   }
 }

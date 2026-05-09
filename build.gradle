@@ -125,13 +125,23 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 processResources {
-    inputs.property "version",    project.version
-    inputs.property "mc_version", targetMc
+    inputs.property "version",               project.version
+    inputs.property "mc_version",            targetMc
+    inputs.property "fabric_loader_version", v.loader
+    inputs.property "fabric_api_version",    v.fabricApi
+    inputs.property "cloth_config_version",  v.cloth
+    inputs.property "modmenu_version",       v.modmenu
+    inputs.property "iris_version",          v.iris
 
     filesMatching("*.mod.json") {
         expand(
-            version:    project.version,
-            mc_version: targetMc
+            version:               project.version,
+            mc_version:            targetMc,
+            fabric_loader_version: v.loader,
+            fabric_api_version:    v.fabricApi,
+            cloth_config_version:  v.cloth,
+            modmenu_version:       v.modmenu,
+            iris_version:          v.iris
         )
     }
 }
