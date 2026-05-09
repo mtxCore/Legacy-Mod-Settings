@@ -1,7 +1,7 @@
-# Legacy Mod Settings
+# Unified Legacy Settings
 
-Legacy Mod Settings adds optional mod toggles directly to Legacy4J menu screens.
-Each integration is soft-dependent: if a target mod is missing, that entry is skipped.
+Unified Legacy Settings adds optional mod toggles directly to Legacy4J menu screens.
+Each integration is soft-dependent: if a target mod is missing, that entry is skipped.The mod ensures that other mods have native-LCE feeling settings as if L4J had added them themselves.
 
 ## Integrations
 
@@ -25,7 +25,7 @@ Each integration is soft-dependent: if a target mod is missing, that entry is sk
 
 ## Configuration
 
-Open Mod Menu -> Legacy Mod Settings -> Config.
+Open Mod Menu -> Unified Legacy Settings -> Config.
 Settings are written to `config/legacy_mod_settings.json`.
 
 ## Build

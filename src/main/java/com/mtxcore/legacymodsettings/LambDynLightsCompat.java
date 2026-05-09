@@ -10,7 +10,8 @@ final class LambDynLightsCompat {
 
   static void addEntries(ModSettingsCompat.Section section,
                          List<ModSettingsCompat.Entry> entries) {
-    if (section != ModSettingsCompat.Section.GAME_OPTIONS)
+    if (!ModSettingsCompat.matchesSectionWithLegacyMerge(
+            section, ModSettingsCompat.Section.GAME_OPTIONS))
       return;
     if (!ModSettingsConfig.get().showDynamicLighting)
       return;

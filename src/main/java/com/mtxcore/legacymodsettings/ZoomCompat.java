@@ -65,9 +65,7 @@ final class ZoomCompat {
     KeyMapping zoomKey = resolveZoomifyKeyMapping();
     KeyMapping secondaryZoomKey = resolveZoomifySecondaryKeyMapping();
     if (zoomKey == null && secondaryZoomKey == null) {
-      LegacyModSettings.LOGGER.info(
-          "[Legacy Mod Settings] ZoomCompat: could not resolve Zoomify "
-          + "key mapping");
+      CompatDebug.log("ZoomCompat: could not resolve Zoomify key mapping");
       return false;
     }
 

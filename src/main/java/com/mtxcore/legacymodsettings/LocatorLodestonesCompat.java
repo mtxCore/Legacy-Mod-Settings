@@ -311,8 +311,7 @@ public final class LocatorLodestonesCompat {
 
       Files.writeString(file, GSON.toJson(obj));
     } catch (IOException e) {
-      LegacyModSettings.LOGGER.debug(
-          "[LNS] Failed to update locator_lodestones.json", e);
+      CompatDebug.log("Failed to update locator_lodestones.json", e);
     }
   }
 }

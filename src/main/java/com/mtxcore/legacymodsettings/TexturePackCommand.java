@@ -163,8 +163,7 @@ final class TexturePackCommand {
       JsonElement def = obj.get("default");
       return def != null && def.isJsonPrimitive() ? def.getAsString() : null;
     } catch (Exception e) {
-      LegacyModSettings.LOGGER.debug(
-          "[LNS] Could not read Legacy4J resource album index", e);
+      CompatDebug.log("Could not read Legacy4J resource album index", e);
       return null;
     }
   }
@@ -198,8 +197,7 @@ final class TexturePackCommand {
       }
       return changed;
     } catch (IOException e) {
-      LegacyModSettings.LOGGER.debug(
-          "[LNS] Could not update Legacy4J pack file {}", file, e);
+      CompatDebug.log("Could not update Legacy4J pack file {}", file, e);
       return false;
     }
   }

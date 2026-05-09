@@ -19,9 +19,7 @@ final class BobbyCompat {
 
     Object cfg = resolveConfig();
     if (cfg == null) {
-      LegacyModSettings.LOGGER.info(
-          "[Legacy Mod Settings] BobbyCompat: could not resolve Bobby "
-          + "config");
+      CompatDebug.log("BobbyCompat: could not resolve Bobby config");
       return;
     }
 
@@ -32,9 +30,8 @@ final class BobbyCompat {
       enabled = RefUtil.field(cfg.getClass(), "enableBobby");
 
     if (isEnabledMethod == null && enabled == null) {
-      LegacyModSettings.LOGGER.info(
-          "[Legacy Mod Settings] BobbyCompat: no enabled accessor on {}",
-          cfg.getClass().getName());
+      CompatDebug.log("BobbyCompat: no enabled accessor on {}",
+                      cfg.getClass().getName());
       return;
     }
 

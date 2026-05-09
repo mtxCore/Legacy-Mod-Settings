@@ -51,8 +51,8 @@ final class RefUtil {
     try {
       field.set(target, value);
     } catch (Exception e) {
-      LegacyModSettings.LOGGER.debug("[LNS] Failed writing field {}: {}",
-                                     field.getName(), e.getMessage());
+      CompatDebug.log("Failed writing field {}: {}", field.getName(),
+                      e.getMessage());
     }
   }
 

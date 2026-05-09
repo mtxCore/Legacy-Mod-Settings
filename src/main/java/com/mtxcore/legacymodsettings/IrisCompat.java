@@ -17,10 +17,13 @@ public class IrisCompat {
     if (!ModSettingsConfig.get().showAdvancedGraphicalEffects)
       return;
 
-    if (section != ModSettingsCompat.Section.GRAPHICS)
+    if (!ModSettingsCompat.matchesSectionWithLegacyMerge(
+            section, ModSettingsCompat.Section.GRAPHICS))
       return;
 
-    String anchor = "smooth lighting";
+    String anchor =
+        "render clouds|custom skin animation|smooth lighting|brightness|"
+        + "gamma|preset";
 
     entries.add(ModSettingsCompat.Entry.toggleBefore(
         anchor,
@@ -70,10 +73,8 @@ public class IrisCompat {
         }
       }
     } catch (Exception e) {
-      LegacyModSettings.LOGGER.debug(
-          "[Legacy Mod Settings] Could not set specific Iris shader pack "
-              + "'{}': {}",
-          packName, e.getMessage());
+      CompatDebug.log("Could not set specific Iris shader pack '{}': {}",
+                      packName, e.getMessage());
     }
   }
 
@@ -113,9 +114,7 @@ public class IrisCompat {
       }
       return result;
     } catch (Exception e) {
-      LegacyModSettings.LOGGER.warn(
-          "[Legacy Mod Settings] Could not list shader packs: {}",
-          e.getMessage());
+      CompatDebug.log("Could not list shader packs: {}", e.getMessage());
       return new ArrayList<>();
     }
   }

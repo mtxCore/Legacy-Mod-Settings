@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "legacy-mod-settings",
   "version": "${version}",
-  "name": "Legacy Mod Settings",
+  "name": "Unified Legacy Settings",
   "icon": "icon.png",
-  "description": "Integrates popular client mods natively into Legacy4J settings menus, as if 4J Studios had added them themselves.",
+  "description": "Integrates popular client mods natively into Legacy4J settings menus, as if 4J Studios had added them themselves. (Unified Legacy Settings)",
   "authors": ["mtxcore"],
   "contact": {
     "sources": "https://github.com/mtxcore/legacy-mod-settings"

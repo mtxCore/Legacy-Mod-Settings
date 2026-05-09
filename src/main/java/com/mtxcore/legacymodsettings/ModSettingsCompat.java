@@ -139,17 +139,13 @@ public class ModSettingsCompat {
 
   public static boolean matchesSectionWithLegacyMerge(Section current,
                                                       Section target) {
-    if (current == target)
-      return true;
-    boolean allowMergedSectionFallback =
-        isLegacySettingsMenusEnabled() &&
-        !ModSettingsConfig.get().showInLegacySettings;
-    if (current == Section.GRAPHICS && target == Section.ADVANCED_GRAPHICS)
-      return allowMergedSectionFallback;
-    if (current == Section.GAME_OPTIONS &&
-        target == Section.ADVANCED_GAME_OPTIONS)
-      return allowMergedSectionFallback;
-    return false;
+    if (isLegacySettingsMenusEnabled()) {
+      if (target == Section.GRAPHICS)
+        return current == Section.ADVANCED_GRAPHICS;
+      if (target == Section.GAME_OPTIONS)
+        return current == Section.ADVANCED_GAME_OPTIONS;
+    }
+    return current == target;
   }
 
   public static boolean isLegacySettingsMenusEnabled() {

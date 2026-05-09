@@ -1,5 +1,6 @@
 package com.mtxcore.legacymodsettings.mixin;
 
+import com.mtxcore.legacymodsettings.CompatDebug;
 import com.mtxcore.legacymodsettings.LegacyModSettings;
 import com.mtxcore.legacymodsettings.ModSettingsCompat;
 import com.mtxcore.legacymodsettings.ModSettingsConfig;
@@ -84,20 +85,6 @@ public abstract class MixinHelpAndOptionsScreen {
         return;
       }
 
-      if (ModSettingsCompat.isLegacySettingsMenusEnabled() &&
-          !ModSettingsConfig.get().showInLegacySettings) {
-        if (section != ModSettingsCompat.Section.ADVANCED_GRAPHICS) {
-          if (ModSettingsConfig.get().debugCompatLogs) {
-            LegacyModSettings.LOGGER.info(
-                "[Legacy Mod Settings] Skipping section={} because "
-                    + "legacySettingsMenus=true, showInLegacySettings=false, "
-                    + "and it's not Advanced Graphics",
-                section);
-          }
-          return;
-        }
-      }
-
       List<ModSettingsCompat.Entry> entries =
           ModSettingsCompat.collectEntries(section);
       if (entries.isEmpty()) {
@@ -145,9 +132,8 @@ public abstract class MixinHelpAndOptionsScreen {
         legacyModSettings$reloadUI(renderableVList);
       }
 
-      LegacyModSettings.LOGGER.info(
-          "[Legacy Mod Settings] Injected compat entries in {} as {}",
-          className, section);
+      CompatDebug.log("Injected compat entries in {} as {}", className,
+                      section);
     } catch (Exception e) {
       LegacyModSettings.LOGGER.error(
           "[Legacy Mod Settings] Failed to inject options", e);
@@ -157,9 +143,8 @@ public abstract class MixinHelpAndOptionsScreen {
   @Inject(method = "<init>", at = @At("RETURN"), remap = false, require = 0)
   private void legacyModSettings$constructorProbe(CallbackInfo ci) {
     if (legacyModSettings$constructorProbeLogged.compareAndSet(false, true)) {
-      LegacyModSettings.LOGGER.info(
-          "[Legacy Mod Settings] PanelVListScreen mixin constructor probe "
-          + "fired (mixin is active)");
+      CompatDebug.log("PanelVListScreen mixin constructor probe fired "
+                      + "(mixin is active)");
     }
   }
 
@@ -402,8 +387,7 @@ public abstract class MixinHelpAndOptionsScreen {
 
       accessor.getClass().getMethod("reloadUI").invoke(accessor);
     } catch (Exception e) {
-      LegacyModSettings.LOGGER.debug(
-          "[Legacy Mod Settings] Could not reload UI after injection", e);
+      CompatDebug.log("Could not reload UI after injection", e);
     }
   }
 
