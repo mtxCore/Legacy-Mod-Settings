@@ -13,31 +13,31 @@ plugins {
 // Keep all version pins in one map so buildAll and single-version builds resolve identically.
 def versions = [
     "1.21.1": [
-        loader:    "0.19.1",
+        loader:    "0.15.11",
         fabricApi: "0.116.7+1.21.1",
         iris:      "1.8.8+1.21.1-fabric",
         cloth:     "15.0.140",
-        modmenu:   "11.0.4",
+        modmenu:   "11.0.3",
         java:      21
     ],
     "1.21.8": [
-        loader:    "0.19.1",
+        loader:    "0.16.13",
         fabricApi: "0.136.1+1.21.8",
         iris:      "1.9.6+1.21.8-fabric",
         cloth:     "19.0.147",
-        modmenu:   "15.0.2",
+        modmenu:   "15.0.1",
         java:      21
     ],
     "1.21.10": [
-        loader:    "0.16.12",
-        fabricApi: "0.138.0+1.21.10",
+        loader:    "0.17.0",
+        fabricApi: "0.138.4+1.21.10",
         iris:      "1.9.7+1.21.10-fabric",
         cloth:     "20.0.149",
         modmenu:   "16.0.1",
         java:      21
     ],
     "26.1.2": [
-        loader:         "0.19.2",
+        loader:         "0.18.4",
         fabricApi:      "0.148.0+26.1.2",
         iris:           "1.10.9+26.1-fabric",
         cloth:          "26.1.154",
@@ -154,6 +154,9 @@ tasks.register("buildAll") {
         def failures = []
         def isWindows = System.properties["os.name"].toLowerCase().contains("win")
         def gradleCmd = isWindows ? "gradlew.bat" : "./gradlew"
+        def libsDir = layout.buildDirectory.dir("libs").get().asFile
+
+        delete fileTree(dir: libsDir, include: "${base.archivesName.get()}-*.jar")
 
         // Run each version in its own Gradle invocation to avoid Loom cross-version state bleed.
         versions.keySet().sort().each { mc ->
