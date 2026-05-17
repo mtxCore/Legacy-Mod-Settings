@@ -9,9 +9,9 @@
   </p>
 
   <p align="center">
-    <a href="https://opensource.org/licenses/MIT"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_mit.png" alt="MIT License" width="64" height="64"></a>&nbsp;
-    <a href="https://fabricmc.net/"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_fabric.png" alt="Fabric" width="64" height="64"></a>&nbsp;
-    <a href="https://modrinth.com/mod/unified-legacy-settings"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_modrinth.png" alt="Modrinth" width="64" height="64"></a>
+    <a href="https://opensource.org/licenses/MIT"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_mit.png" alt="MIT License" width="64" height="63"></a>&nbsp;
+    <a href="https://fabricmc.net/"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_fabric.png" alt="Fabric" width="64" height="63"></a>&nbsp;
+    <a href="https://modrinth.com/mod/unified-legacy-settings"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_modrinth.png" alt="Modrinth" width="64" height="63"></a>
   </p>
 
   <br>
@@ -63,6 +63,7 @@ Unified Legacy Settings adds supported mod options directly into the Legacy4J se
 | Setting | Mod Required |
 |---|---|
 | Chat Portraits | [Chat Heads](https://modrinth.com/mod/chat-heads) |
+| Take Screenshot on Achievement | [Advancement Screenshot](https://modrinth.com/mod/advancement-screenshot) |
 
 *More mods to be supported in the future...*
 

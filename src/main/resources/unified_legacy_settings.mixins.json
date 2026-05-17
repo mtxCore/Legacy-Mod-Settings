@@ -1,10 +1,17 @@
 {
-  "required": true,
+  "required": false,
   "minVersion": "0.8",
   "package": "com.mtxcore.unifiedlegacysettings.mixin",
   "plugin": "com.mtxcore.unifiedlegacysettings.mixin.UnifiedLegacySettingsMixinPlugin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["MixinPanelVListScreen", "MixinLocatorWaypointTracking"],
+  "client": [
+    "MixinPanelVListScreen",
+    "MixinOptionsScreenPanelHeight",
+    "MixinLocatorWaypointTracking",
+    "MixinAdvancementToastGuard",
+    "MixinAdvancementScreenshotUtil",
+    "MixinAdvancementScreenshotEvent"
+  ],
   "injectors": {
     "defaultRequire": 0
   }

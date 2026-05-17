@@ -59,6 +59,8 @@ public final class ModSettingsConfig {
 
   public boolean showChatHeads = true;
 
+  public boolean showAdvancementScreenshot = true;
+
   public boolean showXaeroMinimap = true;
 
   public Boolean xaeroMinimapEnabled = null;
@@ -69,11 +71,12 @@ public final class ModSettingsConfig {
 
   public Boolean continuityConnectedTexturesEnabled = null;
 
+  public boolean advancementScreenshotEnabled = true;
+
   public IrisShaderMode irisShaderMode = IrisShaderMode.LAST_USED;
 
   public String irisSpecificShader = "";
 
-  public boolean debugCompatLogs = false;
 
   public static ModSettingsConfig get() {
     if (instance == null) {

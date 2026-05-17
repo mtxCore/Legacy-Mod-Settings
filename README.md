@@ -4,23 +4,22 @@ Unified Legacy Settings adds optional mod toggles directly to Legacy4J menu scre
 
 ## Integrations
 
-| Menu | Option | Mod |
+| Menu | Option | Source |
 | --- | --- | --- |
 | Graphics | Advanced Graphical Effects | [Iris](https://modrinth.com/mod/iris) |
-| Graphics | Extended Render Distance | [Bobby](https://modrinth.com/mod/bobby) |
+| Advanced Graphics | Extended Online Render Distance | [Bobby](https://modrinth.com/mod/bobby) |
 | Advanced Graphics | Grass Detail | [LambdaBetterGrass](https://modrinth.com/mod/lambdabettergrass) |
 | Advanced Graphics | Snow Layer Blending | [LambdaBetterGrass](https://modrinth.com/mod/lambdabettergrass) |
 | Advanced Graphics | Connected Textures | [Continuity](https://modrinth.com/mod/continuity) |
 | Advanced Graphics | Emissive Textures | [Continuity](https://modrinth.com/mod/continuity) |
 | Advanced Graphics | Third-Person Animations | [Not Enough Animations](https://modrinth.com/mod/not-enough-animations) |
-| Advanced Graphics | Entity Culling | [Sodium](https://modrinth.com/mod/sodium) |
-| Advanced Graphics | Particle Culling | [Sodium](https://modrinth.com/mod/sodium) |
 | Game Options | Dynamic Lighting | [LambDynamicLights](https://modrinth.com/mod/lambdynamiclights) |
-| Game Options | Zoom | [Zoomify](https://modrinth.com/mod/zoomify) |
-| Game Options | Locator Compass | [Locator Lodestones](https://modrinth.com/mod/locator-lodestones) |
+| Game Options | Minimap | [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) |
+| Advanced Game Options | Zoom | [Zoomify](https://modrinth.com/mod/zoomify) |
+| Advanced Game Options | Locator Compass | [Locator Lodestones](https://modrinth.com/mod/locator-lodestones) |
 | Audio | Presence Footsteps | [Presence Footsteps](https://modrinth.com/mod/presence-footsteps) |
-| User Interface | Chat Portraits | [Chat Heads](https://modrinth.com/mod/chat-heads) |
-| User Interface | Minimap | [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) |
+| Advanced User Interface | Chat Portraits | [Chat Heads](https://modrinth.com/mod/chat-heads) |
+| Advanced User Interface | Take Screenshot on Achievement | [Advancement Screenshot](https://modrinth.com/mod/advancement-screenshot) |
 
 ## Configuration
 
@@ -40,6 +39,12 @@ Settings are written to `config/unified_legacy_settings.json`.
 
 Output jars are in `build/libs`.
 
+Java is selected by Gradle toolchains. For `buildAll`, set one of these only if Gradle cannot find the required JDK automatically:
+
+```bash
+./gradlew buildAll -Pjava21Home=/path/to/jdk21 -Pjava25Home=/path/to/jdk25
+```
+
 ## Required
 
 - Fabric Loader
@@ -55,4 +60,4 @@ Integrated mods remain optional.
 2. Add the config toggle in `ModSettingsConfig`.
 3. Register the entries in `ModSettingsCompat`.
 4. Add the config UI toggle in `ClothConfigScreenFactory`.
-5. Add the mod id in `src/main/resources/fabric.mod.json` `suggests`.
+5. Add the mod id in `src/main/resources/fabric.mod.json` `suggests` when the integration target is a mod.

@@ -163,6 +163,7 @@ public class ModSettingsCompat {
     XaeroMinimapCompat.addEntries(section, entries);
     ZoomCompat.addEntries(section, entries);
     ChatHeadsCompat.addEntries(section, entries);
+    AdvancementScreenshotCompat.addEntries(section, entries);
     PresenceFootstepsCompat.addEntries(section, entries);
     LocatorLodestonesCompat.addEntries(section, entries);
 

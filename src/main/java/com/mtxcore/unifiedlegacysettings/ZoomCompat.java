@@ -55,7 +55,6 @@ final class ZoomCompat {
                   !getZoomEnabled(cfg, enabled, zoomKey, secondaryZoomKey);
               zoomDesired = next;
               RefUtil.persistModDesired(next, RefUtil.PersistKey.ZOOM);
-              CompatDebug.log("Zoom toggle (Zoomify config path) -> {}", next);
               applyZoomifyState(cfg, enabled, save, zoomKey, secondaryZoomKey,
                                 next);
               applyZoomifyCompanionSettings(next);
@@ -72,7 +71,6 @@ final class ZoomCompat {
     KeyMapping zoomKey = resolveZoomifyKeyMapping();
     KeyMapping secondaryZoomKey = resolveZoomifySecondaryKeyMapping();
     if (zoomKey == null && secondaryZoomKey == null) {
-      CompatDebug.log("ZoomCompat: could not resolve Zoomify key mapping");
       return false;
     }
 
@@ -85,7 +83,6 @@ final class ZoomCompat {
           boolean next = !getZoomEnabled(null, null, zoomKey, secondaryZoomKey);
           zoomDesired = next;
           RefUtil.persistModDesired(next, RefUtil.PersistKey.ZOOM);
-          CompatDebug.log("Zoom toggle (keybind fallback path) -> {}", next);
           applyZoomKeyState(zoomKey, next, false);
           applyZoomKeyState(secondaryZoomKey, next, true);
           forceZoomifyRuntimeState(next);
@@ -153,13 +150,11 @@ final class ZoomCompat {
       if (enabled != null) {
         if (isZoomEnabled(cfg, enabled, zoomKey, secondaryZoomKey) !=
             zoomDesired) {
-          CompatDebug.log("Enforcing zoom -> {}", zoomDesired);
           applyZoomifyState(cfg, enabled, save, zoomKey, secondaryZoomKey,
                             zoomDesired);
         }
       } else {
         if (isAnyZoomKeyBound(zoomKey, secondaryZoomKey) != zoomDesired) {
-          CompatDebug.log("Enforcing zoom -> {}", zoomDesired);
           applyZoomKeyState(zoomKey, zoomDesired, false);
           applyZoomKeyState(secondaryZoomKey, zoomDesired, true);
           forceZoomifyRuntimeState(zoomDesired);

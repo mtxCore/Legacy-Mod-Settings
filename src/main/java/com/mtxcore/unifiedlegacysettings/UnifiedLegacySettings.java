@@ -12,8 +12,6 @@ public class UnifiedLegacySettings implements ClientModInitializer {
   @Override
   public void onInitializeClient() {
     ModSettingsConfig.get();
-    TexturePackCommand.register();
-    UlsDebugCommand.register();
     RuntimeCompatEnforcer.register();
     LOGGER.info("[ULS] Initialized");
   }

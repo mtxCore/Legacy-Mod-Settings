@@ -11,6 +11,12 @@ public final class UnifiedLegacySettingsMixinPlugin implements IMixinConfigPlugi
 
   private static final String LOCATOR_WAYPOINT_MIXIN =
       "com.mtxcore.unifiedlegacysettings.mixin.MixinLocatorWaypointTracking";
+  private static final String ADVANCEMENT_SCREENSHOT_MIXIN =
+      "com.mtxcore.unifiedlegacysettings.mixin.MixinAdvancementScreenshotUtil";
+  private static final String ADVANCEMENT_SCREENSHOT_EVENT_MIXIN =
+      "com.mtxcore.unifiedlegacysettings.mixin.MixinAdvancementScreenshotEvent";
+  private static final String ADVANCEMENT_TOAST_GUARD_MIXIN =
+      "com.mtxcore.unifiedlegacysettings.mixin.MixinAdvancementToastGuard";
 
   @Override
   public void onLoad(String mixinPackage) {}
@@ -23,6 +29,11 @@ public final class UnifiedLegacySettingsMixinPlugin implements IMixinConfigPlugi
                                   String mixinClassName) {
     if (LOCATOR_WAYPOINT_MIXIN.equals(mixinClassName)) {
       return FabricLoader.getInstance().isModLoaded("locator_lodestones");
+    }
+    if (ADVANCEMENT_SCREENSHOT_MIXIN.equals(mixinClassName) ||
+        ADVANCEMENT_SCREENSHOT_EVENT_MIXIN.equals(mixinClassName) ||
+        ADVANCEMENT_TOAST_GUARD_MIXIN.equals(mixinClassName)) {
+      return FabricLoader.getInstance().isModLoaded("advancementscreenshot");
     }
     return true;
   }

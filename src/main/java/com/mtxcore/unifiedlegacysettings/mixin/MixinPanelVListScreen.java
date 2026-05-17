@@ -1,9 +1,7 @@
 package com.mtxcore.unifiedlegacysettings.mixin;
 
-import com.mtxcore.unifiedlegacysettings.CompatDebug;
 import com.mtxcore.unifiedlegacysettings.UnifiedLegacySettings;
 import com.mtxcore.unifiedlegacysettings.ModSettingsCompat;
-import com.mtxcore.unifiedlegacysettings.ModSettingsConfig;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collections;
@@ -33,13 +31,8 @@ public abstract class MixinPanelVListScreen {
       unifiedLegacySettings$injectedByList =
           Collections.synchronizedMap(new WeakHashMap<>());
 
-  @Inject(method = "renderableVListInit", at = @At("RETURN"), remap = false)
+  @Inject(method = "renderableVListInit", at = @At("HEAD"), remap = false)
   private void unifiedLegacySettings$injectNativeSettings(CallbackInfo ci) {
-    unifiedLegacySettings$injectNativeSettingsImpl();
-  }
-
-  @Inject(method = "init", at = @At("RETURN"), remap = false, require = 0)
-  private void unifiedLegacySettings$injectNativeSettingsFallback(CallbackInfo ci) {
     unifiedLegacySettings$injectNativeSettingsImpl();
   }
 
@@ -65,13 +58,6 @@ public abstract class MixinPanelVListScreen {
       String title = unifiedLegacySettings$readScreenTitle(this);
       ModSettingsCompat.Section section =
           ModSettingsCompat.detectSection(title, className, renderables);
-      if (ModSettingsConfig.get().debugCompatLogs) {
-        UnifiedLegacySettings.LOGGER.info(
-            "[ULS] Mixin hook fired for class={} title='{}' "
-                + "section={} renderables={}",
-            className, title, section, renderables.size());
-      }
-
       if (section == ModSettingsCompat.Section.OTHER) {
         return;
       }
@@ -85,8 +71,6 @@ public abstract class MixinPanelVListScreen {
       if (entries.isEmpty()) {
         return;
       }
-
-      int added = 0;
 
       for (ModSettingsCompat.Entry entry : entries) {
         if (unifiedLegacySettings$containsEntry(renderables, entry)) {
@@ -120,15 +104,8 @@ public abstract class MixinPanelVListScreen {
         int insertIndex = unifiedLegacySettings$findInsertIndex(
             renderables, entry.insertBeforeText());
         renderables.add(insertIndex, widget);
-        added++;
       }
 
-      if (added > 0) {
-        unifiedLegacySettings$reloadUI(renderableVList);
-      }
-
-      CompatDebug.log("Injected compat entries in {} as {}", className,
-                      section);
     } catch (Exception e) {
       UnifiedLegacySettings.LOGGER.error(
           "[ULS] Failed to inject options", e);
@@ -244,7 +221,7 @@ public abstract class MixinPanelVListScreen {
       Class<?> tickBoxClass =
           Class.forName("wily.legacy.client.screen.TickBox");
       Constructor<?> ctor =
-          unifiedLegacySettings$findCtorByParamCount(tickBoxClass, 8);
+          unifiedLegacySettings$findTickBoxConstructor(tickBoxClass);
       if (ctor == null) {
         UnifiedLegacySettings.LOGGER.error(
             "[ULS] TickBox constructor not found");
@@ -360,37 +337,33 @@ public abstract class MixinPanelVListScreen {
   }
 
   @Unique
-  private static void unifiedLegacySettings$reloadUI(Object renderableVList) {
-    try {
-      Field accessorField = unifiedLegacySettings$findFieldInHierarchy(
-          renderableVList.getClass(), "accessor");
-      if (accessorField == null)
-        return;
-      accessorField.setAccessible(true);
-
-      Object accessor = accessorField.get(renderableVList);
-      if (accessor == null)
-        return;
-
-      accessor.getClass().getMethod("reloadUI").invoke(accessor);
-    } catch (Exception e) {
-      CompatDebug.log("Could not reload UI after injection", e);
-    }
-  }
-
-  @Unique
   private static Constructor<?>
-  unifiedLegacySettings$findCtorByParamCount(Class<?> cls, int count) {
+  unifiedLegacySettings$findTickBoxConstructor(Class<?> cls) {
     for (Constructor<?> c : cls.getConstructors()) {
-      if (c.getParameterCount() == count)
+      if (unifiedLegacySettings$isTickBoxConstructor(c))
         return c;
     }
     for (Constructor<?> c : cls.getDeclaredConstructors()) {
-      if (c.getParameterCount() == count) {
+      if (unifiedLegacySettings$isTickBoxConstructor(c)) {
         c.setAccessible(true);
         return c;
       }
     }
     return null;
+  }
+
+  @Unique
+  private static boolean
+  unifiedLegacySettings$isTickBoxConstructor(Constructor<?> ctor) {
+    Class<?>[] params = ctor.getParameterTypes();
+    return params.length == 8 &&
+           params[0] == int.class &&
+           params[1] == int.class &&
+           params[2] == int.class &&
+           params[3] == boolean.class &&
+           Function.class.isAssignableFrom(params[4]) &&
+           Function.class.isAssignableFrom(params[5]) &&
+           Consumer.class.isAssignableFrom(params[6]) &&
+           BooleanSupplier.class.isAssignableFrom(params[7]);
   }
 }

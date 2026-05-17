@@ -19,7 +19,6 @@ final class BobbyCompat {
 
     Object cfg = resolveConfig();
     if (cfg == null) {
-      CompatDebug.log("BobbyCompat: could not resolve Bobby config");
       return;
     }
 
@@ -30,8 +29,6 @@ final class BobbyCompat {
       enabled = RefUtil.field(cfg.getClass(), "enableBobby");
 
     if (isEnabledMethod == null && enabled == null) {
-      CompatDebug.log("BobbyCompat: no enabled accessor on {}",
-                      cfg.getClass().getName());
       return;
     }
 

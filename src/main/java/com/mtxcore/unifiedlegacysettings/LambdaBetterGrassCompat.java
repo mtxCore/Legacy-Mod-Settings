@@ -168,9 +168,6 @@ final class LambdaBetterGrassCompat {
                               initial, valueListSupplier, onChange,
                               currentSupplier);
     } catch (Exception e) {
-      CompatDebug.log(
-          "Could not create LegacySliderButton for Grass Detail: {}",
-          e.getMessage());
       return null;
     }
   }

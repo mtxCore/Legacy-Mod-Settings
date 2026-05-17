@@ -1,8 +1,13 @@
 .gradle/
 .vscode/
 build/
-node_modules/
-out/
-.idea/
-*.class
 bin/
+out/
+run/
+node_modules/
+*.log
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+.DS_Store
+modrinth/

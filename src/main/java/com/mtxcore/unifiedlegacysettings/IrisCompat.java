@@ -50,9 +50,6 @@ public class IrisCompat {
     if (cfg.irisShaderMode == ModSettingsConfig.IrisShaderMode.SPECIFIC &&
         cfg.irisSpecificShader != null && !cfg.irisSpecificShader.isBlank()) {
       if (!applySpecificShaderPack(cfg.irisSpecificShader)) {
-        CompatDebug.log("Could not apply specific shader '{}'; leaving "
-                            + "shaders disabled to avoid fallback.",
-                        cfg.irisSpecificShader);
         setShadersEnabled(false);
         return;
       }
@@ -76,8 +73,6 @@ public class IrisCompat {
       Iris.reload();
       return true;
     } catch (Exception e) {
-      CompatDebug.log("Could not set specific Iris shader pack '{}': {}",
-                      packName, e.getMessage());
     }
     return false;
   }
@@ -118,7 +113,6 @@ public class IrisCompat {
       }
       return result;
     } catch (Exception e) {
-      CompatDebug.log("Could not list shader packs: {}", e.getMessage());
       return new ArrayList<>();
     }
   }

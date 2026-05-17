@@ -29,8 +29,6 @@ final class PresenceFootstepsCompat {
 
     ToggleAccessor toggle = resolveToggleAccessor();
     if (toggle == null) {
-      CompatDebug.log("PresenceFootstepsCompat: no compatible accessor found; "
-                      + "skipping toggle.");
       return;
     }
 
@@ -47,11 +45,7 @@ final class PresenceFootstepsCompat {
             UnifiedLegacySettings.LOGGER.error(
                 "[ULS] Presence Footsteps toggle failed", t);
           }
-          int removed = removePresenceFootstepsToasts();
-          if (removed > 0)
-            CompatDebug.log(
-                "PresenceFootstepsCompat: removed {} Presence Footsteps toasts",
-                removed);
+          removePresenceFootstepsToasts();
         },
         toggle::isEnabled,
         ()
@@ -132,7 +126,6 @@ final class PresenceFootstepsCompat {
     ToggleAccessor legacy = resolveLegacyAccessor();
     if (legacy != null)
       return legacy;
-    CompatDebug.log("PresenceFootstepsCompat: no accessor resolved");
     return null;
   }
 
@@ -194,9 +187,6 @@ final class PresenceFootstepsCompat {
                 }
               }
             } catch (Throwable t) {
-              CompatDebug.log(
-                  "PresenceFootstepsCompat: error searching for setter methods",
-                  t);
             }
           }
         }
@@ -243,7 +233,6 @@ final class PresenceFootstepsCompat {
         }
       }
     } catch (Throwable t) {
-      CompatDebug.log("PresenceFootstepsCompat: quiet accessor failed", t);
     }
 
     if (getEnabled == null || setDisabled == null)

@@ -127,7 +127,6 @@ final class XaeroMinimapCompat {
                 modernApi.settings());
             minimapDesired = next;
             RefUtil.persistModDesired(next, RefUtil.PersistKey.XAERO_MINIMAP);
-            CompatDebug.log("Minimap toggle (modern path) -> {}", next);
             applyModSettingsToggle(next);
             modernApi.setOption().invoke(
                 modernApi.config(), modernApi.displayMinimapOption(), next);
@@ -195,7 +194,6 @@ final class XaeroMinimapCompat {
           minimapDesired = next;
           RefUtil.persistModDesired(minimapDesired,
                                     RefUtil.PersistKey.XAERO_MINIMAP);
-          CompatDebug.log("Minimap toggle (legacy path) -> {}", next);
           RefUtil.writeField(finalCfg, finalEnabled, next);
           applyBooleanSetter(finalCfg, next, "setMinimap", "setDisplayMinimap",
                              "setEnabled");
@@ -226,7 +224,6 @@ final class XaeroMinimapCompat {
                              modernApi.displayMinimapOption(),
                              modernApi.getMinimap(), modernApi.settings());
       if (current != minimapDesired) {
-        CompatDebug.log("Enforcing minimap -> {}", minimapDesired);
         applyModSettingsToggle(minimapDesired);
         modernApi.setOption().invoke(modernApi.config(),
                                      modernApi.displayMinimapOption(),
@@ -264,7 +261,6 @@ final class XaeroMinimapCompat {
     if (enabled != null) {
       boolean current = RefUtil.readBooleanField(cfg, enabled, true);
       if (current != minimapDesired) {
-        CompatDebug.log("Enforcing minimap -> {}", minimapDesired);
         applyModSettingsToggle(minimapDesired);
         RefUtil.writeField(cfg, enabled, minimapDesired);
       }

@@ -67,8 +67,6 @@ final class RefUtil {
     try {
       field.set(target, value);
     } catch (Exception e) {
-      CompatDebug.log("Failed writing field {}: {}", field.getName(),
-                      e.getMessage());
     }
   }
 

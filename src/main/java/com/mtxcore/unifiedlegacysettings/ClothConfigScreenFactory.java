@@ -101,6 +101,17 @@ final class ClothConfigScreenFactory {
         boolEntry(eb, "Chat Portraits (Chat Heads)", cfg.showChatHeads,
                   "Adds the Chat Portraits toggle in Advanced User Interface.",
                   v -> cfg.showChatHeads = v));
+    ui.add(boolEntry(
+        eb, "Show Advancement Screenshot Controls",
+        cfg.showAdvancementScreenshot,
+        "Adds Advancement Screenshot controls in Advanced User Interface.",
+        v -> cfg.showAdvancementScreenshot = v));
+    ui.add(boolEntry(
+        eb, "Take Screenshot on Achievement",
+        cfg.advancementScreenshotEnabled,
+        "Allows Advancement Screenshot to save screenshots when achievements "
+            + "or advancements appear.",
+        AdvancementScreenshotCompat::setTakeScreenshotOnAchievement));
     category.addEntry(ui.build());
 
     var audio = eb.startSubCategory(Component.literal("Audio Screen"));
@@ -154,18 +165,6 @@ final class ClothConfigScreenFactory {
             .build());
 
     category.addEntry(iris.build());
-
-    var debug = eb.startSubCategory(Component.literal("Debug"));
-    debug.setExpanded(false);
-    debug.add(
-        eb.startBooleanToggle(Component.literal("Enable Compat Debug Logs"),
-                              cfg.debugCompatLogs)
-            .setDefaultValue(false)
-            .setTooltip(Component.literal(
-                "Write detailed integration diagnostics to latest.log."))
-            .setSaveConsumer(saveAnd(v -> cfg.debugCompatLogs = v))
-            .build());
-    category.addEntry(debug.build());
 
     return builder.build();
   }

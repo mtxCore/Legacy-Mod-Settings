@@ -63,7 +63,6 @@ public final class LocatorLodestonesCompat {
           locatorDesired = next;
           RefUtil.persistModDesired(locatorDesired,
                                     RefUtil.PersistKey.LOCATOR_LODESTONES);
-          CompatDebug.log("Locator Compass toggle -> {}", next);
           setTabDisplayEnabled(next);
           for (Object setting : settings) {
             setSettingEnabled(setting, next);
@@ -94,9 +93,6 @@ public final class LocatorLodestonesCompat {
     if (!needsModeUpdate && !needsBooleanUpdate)
       return;
 
-    CompatDebug.log(
-        "Enforcing Locator Compass -> {} (tabEnabled={}, booleansEnabled={})",
-        locatorDesired, tabEnabled, booleansEnabled);
 
     if (needsModeUpdate) {
       setTabDisplayEnabled(locatorDesired);
@@ -203,8 +199,6 @@ public final class LocatorLodestonesCompat {
     }
 
     Object current = readTabDisplayValue();
-    CompatDebug.log("Locator TAB_DISPLAY set request -> {} (current={})", mode,
-                    current);
   }
 
   private static boolean readSettingEnabled(Object setting) {
@@ -323,7 +317,6 @@ public final class LocatorLodestonesCompat {
 
       Files.writeString(file, GSON.toJson(obj));
     } catch (IOException e) {
-      CompatDebug.log("Failed to update locator_lodestones.json", e);
     }
   }
 }

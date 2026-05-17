@@ -10,8 +10,6 @@ final class RuntimeCompatEnforcer {
 
   static void register() {
     ClientTickEvents.END_CLIENT_TICK.register(client -> {
-      // Increment before the guard so debug logs and cadence use the true
-      // global tick count.
       if (++ticks % 20 != 0)
         return;
 

@@ -82,7 +82,6 @@ final class ContinuityCompat {
             connectedTexturesDesired = next;
             RefUtil.persistModDesired(next, RefUtil.PersistKey.CONTINUITY);
             applyConnectedTexturesConfig(next);
-            CompatDebug.log("Connected Textures toggle -> {}", next);
             applyConnectedTexturePacks(next);
           }
         },
@@ -124,8 +123,6 @@ final class ContinuityCompat {
 
     boolean currentEnabled = RefUtil.invokeBoolean(isEnabled, state, true);
     if (currentEnabled != connectedTexturesDesired) {
-      CompatDebug.log("Enforcing Continuity connected textures -> {}",
-                      connectedTexturesDesired);
       applyConnectedTexturesConfig(connectedTexturesDesired);
       if (connectedTexturesDesired) {
         RefUtil.invoke(enable, state);
@@ -145,22 +142,20 @@ final class ContinuityCompat {
   private static void applyConnectedTexturePacks(boolean enabled) {
     if (!enabled) {
       for (String packId : CONNECTED_TEXTURE_PACK_CANDIDATES) {
-        TexturePackCommand.applySilently(packId, false);
+        ResourcePackCompat.applySilently(packId, false);
       }
       return;
     }
 
     String packId = resolveAvailableConnectedTexturePack();
     if (packId == null) {
-      CompatDebug.log("Continuity connected texture pack not found; skipping "
-                      + "resource-pack update");
       return;
     }
 
-    TexturePackCommand.applySilently(packId, true);
+    ResourcePackCompat.applySilently(packId, true);
     for (String candidate : CONNECTED_TEXTURE_PACK_CANDIDATES) {
       if (!candidate.equals(packId)) {
-        TexturePackCommand.applySilently(candidate, false);
+        ResourcePackCompat.applySilently(candidate, false);
       }
     }
   }
