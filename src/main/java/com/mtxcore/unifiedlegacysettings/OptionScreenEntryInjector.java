@@ -24,6 +24,11 @@ public final class OptionScreenEntryInjector {
   private OptionScreenEntryInjector() {}
 
   public static void inject(Object screen) {
+    inject(screen, null);
+  }
+
+  private static void inject(Object screen,
+                             ModSettingsCompat.Section forcedSection) {
     if (screen == null)
       return;
 
@@ -48,10 +53,15 @@ public final class OptionScreenEntryInjector {
 
       String title = readScreenTitle(screen);
       ModSettingsCompat.Section section =
-          ModSettingsCompat.detectSection(title, className, renderables);
+          forcedSection == null
+              ? ModSettingsCompat.detectSection(title, className, renderables)
+              : forcedSection;
       if (section == ModSettingsCompat.Section.OTHER) {
         return;
       }
+
+      if (forcedSection == null)
+        injectAdvancedOptionsScreen(screen, section);
 
       if (alreadyInjected(renderableVList, section)) {
         return;
@@ -111,6 +121,43 @@ public final class OptionScreenEntryInjector {
       }
       injected.add(section);
       return false;
+    }
+  }
+
+  private static void injectAdvancedOptionsScreen(
+      Object screen, ModSettingsCompat.Section section) {
+    ModSettingsCompat.Section advanced = advancedSectionFor(section);
+    if (advanced == null)
+      return;
+
+    Object advancedScreen = readAdvancedOptionsScreen(screen);
+    if (advancedScreen == null || advancedScreen == screen)
+      return;
+
+    inject(advancedScreen, advanced);
+  }
+
+  private static ModSettingsCompat.Section advancedSectionFor(
+      ModSettingsCompat.Section section) {
+    return switch (section) {
+      case GRAPHICS -> ModSettingsCompat.Section.ADVANCED_GRAPHICS;
+      case GAME_OPTIONS -> ModSettingsCompat.Section.ADVANCED_GAME_OPTIONS;
+      case AUDIO -> ModSettingsCompat.Section.ADVANCED_AUDIO;
+      case USER_INTERFACE -> ModSettingsCompat.Section.ADVANCED_USER_INTERFACE;
+      default -> null;
+    };
+  }
+
+  private static Object readAdvancedOptionsScreen(Object screen) {
+    try {
+      Field advancedOptionsField =
+          findFieldInHierarchy(screen.getClass(), "advancedOptionsScreen");
+      if (advancedOptionsField == null)
+        return null;
+      advancedOptionsField.setAccessible(true);
+      return advancedOptionsField.get(screen);
+    } catch (Exception ignored) {
+      return null;
     }
   }
 

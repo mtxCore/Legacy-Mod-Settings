@@ -96,29 +96,13 @@ public class ModSettingsCompat {
       return Section.ADVANCED_USER_INTERFACE;
     if (lowerTitle.contains("advanced options") && lowerTitle.contains("audio"))
       return Section.ADVANCED_AUDIO;
-    if (lowerTitle.contains("game options"))
-      return Section.GAME_OPTIONS;
-    if (lowerTitle.contains("user interface"))
-      return Section.USER_INTERFACE;
-    if (lowerTitle.equals("graphics"))
-      return Section.GRAPHICS;
-    if (lowerTitle.equals("audio"))
-      return Section.AUDIO;
-
     if (RefUtil.hasAnyMessageText(renderables, "fullscreen"))
       return Section.ADVANCED_GRAPHICS;
-    if (RefUtil.hasAnyMessageText(renderables, "smooth lighting",
-                                  "render clouds"))
-      return Section.GRAPHICS;
-    if (RefUtil.hasAnyMessageText(renderables, "view bobbing", "languages"))
-      return Section.GAME_OPTIONS;
     if (RefUtil.hasAnyMessageText(renderables, "maps with coordinates",
                                   "legacy creative block placing",
-                                  "allow unfocused input", "vanilla tutorial"))
+                                  "allow unfocused input", "vanilla tutorial",
+                                  "difficulty"))
       return Section.ADVANCED_GAME_OPTIONS;
-    if (RefUtil.hasAnyMessageText(renderables, "display hud",
-                                  "attack indicator", "display game messages"))
-      return Section.USER_INTERFACE;
     if (RefUtil.hasAnyMessageText(
             renderables, "display system messages as overlay",
             "display chat indicators", "show screenshot toasts",
@@ -139,6 +123,24 @@ public class ModSettingsCompat {
                                   "inventory hover focus sound",
                                   "directional audio", "music frequency"))
       return Section.ADVANCED_AUDIO;
+
+    if (lowerTitle.contains("game options"))
+      return Section.GAME_OPTIONS;
+    if (lowerTitle.contains("user interface"))
+      return Section.USER_INTERFACE;
+    if (lowerTitle.equals("graphics"))
+      return Section.GRAPHICS;
+    if (lowerTitle.equals("audio"))
+      return Section.AUDIO;
+
+    if (RefUtil.hasAnyMessageText(renderables, "smooth lighting",
+                                  "render clouds"))
+      return Section.GRAPHICS;
+    if (RefUtil.hasAnyMessageText(renderables, "view bobbing", "languages"))
+      return Section.GAME_OPTIONS;
+    if (RefUtil.hasAnyMessageText(renderables, "display hud",
+                                  "attack indicator", "display game messages"))
+      return Section.USER_INTERFACE;
     if (RefUtil.hasAnyMessageText(renderables, "players", "blocks",
                                   "hostile creatures"))
       return Section.AUDIO;
@@ -148,16 +150,14 @@ public class ModSettingsCompat {
 
   public static boolean matchesSectionWithLegacyMerge(Section current,
                                                       Section target) {
-    if (isLegacySettingsMenusEnabled()) {
-      if (target == Section.GRAPHICS)
-        return current == legacyMenuTarget(target);
-      if (target == Section.GAME_OPTIONS)
-        return current == legacyMenuTarget(target);
-      if (target == Section.AUDIO)
-        return current == legacyMenuTarget(target);
-      if (target == Section.USER_INTERFACE)
-        return current == legacyMenuTarget(target);
-    }
+    if (target == Section.GRAPHICS)
+      return current == legacyMenuTarget(target);
+    if (target == Section.GAME_OPTIONS)
+      return current == legacyMenuTarget(target);
+    if (target == Section.AUDIO)
+      return current == legacyMenuTarget(target);
+    if (target == Section.USER_INTERFACE)
+      return current == legacyMenuTarget(target);
     return current == target;
   }
 
@@ -179,8 +179,7 @@ public class ModSettingsCompat {
   }
 
   private static boolean shouldSkipMainLegacySection(Section section) {
-    return isLegacySettingsMenusEnabled() &&
-           !ModSettingsConfig.get().showInLegacySettings &&
+    return !ModSettingsConfig.get().showInLegacySettings &&
            advancedSectionFor(section) != null;
   }
 
@@ -217,7 +216,7 @@ public class ModSettingsCompat {
 
   private static void addNativeConfigEntry(Section section,
                                            List<Entry> entries) {
-    if (!matchesUserInterfaceSection(section))
+    if (section != Section.ADVANCED_USER_INTERFACE)
       return;
 
     entries.add(Entry.buttonBefore(
