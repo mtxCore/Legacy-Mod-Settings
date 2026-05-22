@@ -11,3 +11,4 @@ node_modules/
 !gradle/wrapper/gradle-wrapper.jar
 .DS_Store
 modrinth/
+curseforge/

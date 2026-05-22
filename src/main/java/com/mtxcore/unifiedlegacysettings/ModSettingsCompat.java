@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 public class ModSettingsCompat {
@@ -14,6 +15,8 @@ public class ModSettingsCompat {
     GAME_OPTIONS,
     ADVANCED_GAME_OPTIONS,
     AUDIO,
+    ADVANCED_AUDIO,
+    USER_INTERFACE,
     ADVANCED_USER_INTERFACE,
     OTHER,
   }
@@ -43,6 +46,13 @@ public class ModSettingsCompat {
                        tooltip, WidgetKind.CYCLE, null);
     }
 
+    public static Entry buttonBefore(String before, Supplier<Component> label,
+                                     Runnable onActivate,
+                                     Supplier<Component> tooltip) {
+      return new Entry(before, label.get().getString(), label, onActivate, null,
+                       tooltip, WidgetKind.CYCLE, null);
+    }
+
     public static Entry customBefore(String before, String dedupeText,
                                      Supplier<Object> customWidget,
                                      Supplier<Component> tooltip) {
@@ -56,8 +66,6 @@ public class ModSettingsCompat {
     String cls = className == null ? "" : className.toLowerCase();
     String lowerTitle = title == null ? "" : title.toLowerCase();
 
-    // Check advanced variants first so broader matches like "graphics" do not
-    // misclassify them.
     if (cls.contains("advanced") && cls.contains("graphics"))
       return Section.ADVANCED_GRAPHICS;
     if (cls.contains("advanced") && cls.contains("game") &&
@@ -66,12 +74,15 @@ public class ModSettingsCompat {
     if (cls.contains("advanced") &&
         (cls.contains("interface") || cls.contains("hud")))
       return Section.ADVANCED_USER_INTERFACE;
+    if (cls.contains("advanced") &&
+        (cls.contains("audio") || cls.contains("sound")))
+      return Section.ADVANCED_AUDIO;
     if (cls.contains("graphics"))
       return Section.GRAPHICS;
     if (cls.contains("game") && cls.contains("option"))
       return Section.GAME_OPTIONS;
     if (cls.contains("interface") || cls.contains("hud"))
-      return Section.ADVANCED_USER_INTERFACE;
+      return Section.USER_INTERFACE;
     if (cls.contains("audio") || cls.contains("sound"))
       return Section.AUDIO;
 
@@ -84,17 +95,16 @@ public class ModSettingsCompat {
         lowerTitle.contains("interface"))
       return Section.ADVANCED_USER_INTERFACE;
     if (lowerTitle.contains("advanced options") && lowerTitle.contains("audio"))
-      return Section.AUDIO;
+      return Section.ADVANCED_AUDIO;
     if (lowerTitle.contains("game options"))
       return Section.GAME_OPTIONS;
     if (lowerTitle.contains("user interface"))
-      return Section.ADVANCED_USER_INTERFACE;
+      return Section.USER_INTERFACE;
     if (lowerTitle.equals("graphics"))
       return Section.GRAPHICS;
     if (lowerTitle.equals("audio"))
       return Section.AUDIO;
 
-    // Final fallback uses known option labels
     if (RefUtil.hasAnyMessageText(renderables, "fullscreen"))
       return Section.ADVANCED_GRAPHICS;
     if (RefUtil.hasAnyMessageText(renderables, "smooth lighting",
@@ -108,7 +118,7 @@ public class ModSettingsCompat {
       return Section.ADVANCED_GAME_OPTIONS;
     if (RefUtil.hasAnyMessageText(renderables, "display hud",
                                   "attack indicator", "display game messages"))
-      return Section.ADVANCED_USER_INTERFACE;
+      return Section.USER_INTERFACE;
     if (RefUtil.hasAnyMessageText(
             renderables, "display system messages as overlay",
             "display chat indicators", "show screenshot toasts",
@@ -128,7 +138,7 @@ public class ModSettingsCompat {
                                   "hover focus sound",
                                   "inventory hover focus sound",
                                   "directional audio", "music frequency"))
-      return Section.AUDIO;
+      return Section.ADVANCED_AUDIO;
     if (RefUtil.hasAnyMessageText(renderables, "players", "blocks",
                                   "hostile creatures"))
       return Section.AUDIO;
@@ -140,19 +150,54 @@ public class ModSettingsCompat {
                                                       Section target) {
     if (isLegacySettingsMenusEnabled()) {
       if (target == Section.GRAPHICS)
-        return current == Section.ADVANCED_GRAPHICS;
+        return current == legacyMenuTarget(target);
       if (target == Section.GAME_OPTIONS)
-        return current == Section.ADVANCED_GAME_OPTIONS;
+        return current == legacyMenuTarget(target);
+      if (target == Section.AUDIO)
+        return current == legacyMenuTarget(target);
+      if (target == Section.USER_INTERFACE)
+        return current == legacyMenuTarget(target);
     }
     return current == target;
+  }
+
+  private static Section legacyMenuTarget(Section target) {
+    if (ModSettingsConfig.get().showInLegacySettings)
+      return target;
+    Section advanced = advancedSectionFor(target);
+    return advanced == null ? target : advanced;
+  }
+
+  private static Section advancedSectionFor(Section section) {
+    return switch (section) {
+      case GRAPHICS -> Section.ADVANCED_GRAPHICS;
+      case GAME_OPTIONS -> Section.ADVANCED_GAME_OPTIONS;
+      case AUDIO -> Section.ADVANCED_AUDIO;
+      case USER_INTERFACE -> Section.ADVANCED_USER_INTERFACE;
+      default -> null;
+    };
+  }
+
+  private static boolean shouldSkipMainLegacySection(Section section) {
+    return isLegacySettingsMenusEnabled() &&
+           !ModSettingsConfig.get().showInLegacySettings &&
+           advancedSectionFor(section) != null;
   }
 
   public static boolean isLegacySettingsMenusEnabled() {
     return RefUtil.legacySettingsMenusEnabled();
   }
 
+  public static boolean matchesUserInterfaceSection(Section section) {
+    return matchesSectionWithLegacyMerge(section, Section.USER_INTERFACE);
+  }
+
   public static List<Entry> collectEntries(Section section) {
     List<Entry> entries = new ArrayList<>();
+    if (shouldSkipMainLegacySection(section))
+      return entries;
+
+    addNativeConfigEntry(section, entries);
 
     IrisCompat.addEntries(section, entries);
     BobbyCompat.addEntries(section, entries);
@@ -168,5 +213,21 @@ public class ModSettingsCompat {
     LocatorLodestonesCompat.addEntries(section, entries);
 
     return entries;
+  }
+
+  private static void addNativeConfigEntry(Section section,
+                                           List<Entry> entries) {
+    if (!matchesUserInterfaceSection(section))
+      return;
+
+    entries.add(Entry.buttonBefore(
+        "legacy settings|show screenshot toasts|autosave countdown",
+        () -> Component.literal("Unified Legacy Settings"),
+        () -> {
+          Minecraft minecraft = Minecraft.getInstance();
+          minecraft.setScreen(NativeConfigScreen.create(minecraft.screen));
+        },
+        () -> Component.literal(
+            "Configure Unified Legacy Settings integrations.")));
   }
 }

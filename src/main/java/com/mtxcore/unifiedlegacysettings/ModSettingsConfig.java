@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 import net.fabricmc.loader.api.FabricLoader;
 
-// Global Config
 public final class ModSettingsConfig {
 
   public enum IrisShaderMode {

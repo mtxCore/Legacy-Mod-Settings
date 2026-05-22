@@ -23,7 +23,6 @@
     "legacy": ">=0"
   },
   "suggests": {
-    "cloth-config2": ">=${cloth_config_version}",
     "modmenu": ">=${modmenu_version}",
     "iris": ">=${iris_version}",
     "lambdynlights": ">=0",

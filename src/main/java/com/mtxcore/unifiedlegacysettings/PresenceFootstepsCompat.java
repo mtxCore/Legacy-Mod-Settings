@@ -20,7 +20,8 @@ final class PresenceFootstepsCompat {
 
   static void addEntries(ModSettingsCompat.Section section,
                          List<ModSettingsCompat.Entry> entries) {
-    if (section != ModSettingsCompat.Section.AUDIO)
+    if (!ModSettingsCompat.matchesSectionWithLegacyMerge(
+            section, ModSettingsCompat.Section.AUDIO))
       return;
     if (!ModSettingsConfig.get().showPresenceFootsteps)
       return;

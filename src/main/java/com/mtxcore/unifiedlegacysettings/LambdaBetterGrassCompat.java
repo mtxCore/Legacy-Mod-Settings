@@ -10,130 +10,112 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
+// Adds "Grass Detail" (LBGMode slider) and "Snow Layer Blending" (toggle) to
+// Advanced Graphics, wiring into LambdaBetterGrass's public config API.
 final class LambdaBetterGrassCompat {
 
   private LambdaBetterGrassCompat() {}
 
   static void addEntries(ModSettingsCompat.Section section,
                          List<ModSettingsCompat.Entry> entries) {
+    if (section != ModSettingsCompat.Section.ADVANCED_GRAPHICS)
+      return;
     if (!RefUtil.isModLoaded("lambdabettergrass"))
       return;
 
-    RefUtil.MethodRef getMod = RefUtil.staticMethod(
-        "dev.lambdaurora.lambdabettergrass.LambdaBetterGrass", "get");
-    if (getMod == null)
-      return;
-    Object mod = getMod.invokeStatic();
+    Object mod = RefUtil.invoke(
+        RefUtil.staticMethod(
+            "dev.lambdaurora.lambdabettergrass.LambdaBetterGrass", "get"),
+        null);
     if (mod == null)
       return;
+
     Object cfg = RefUtil.instanceField(mod, "config");
     if (cfg == null)
       return;
 
-    if (section == ModSettingsCompat.Section.ADVANCED_GRAPHICS &&
-        ModSettingsConfig.get().showGrassDetail) {
-      RefUtil.MethodRef getMode = RefUtil.method(cfg.getClass(), "getMode");
-      Class<?> modeClass =
-          RefUtil.classForName("dev.lambdaurora.lambdabettergrass.LBGMode");
-      RefUtil.MethodRef setMode =
-          RefUtil.method(cfg.getClass(), "setMode", modeClass);
-      RefUtil.MethodRef save = RefUtil.method(cfg.getClass(), "save");
+    if (ModSettingsConfig.get().showGrassDetail)
+      addGrassDetailEntry(entries, mod, cfg);
 
-      if (getMode != null && setMode != null && modeClass != null &&
-          modeClass.isEnum()) {
-        Object[] values = modeClass.getEnumConstants();
-        if (values != null && values.length > 0) {
-          entries.add(ModSettingsCompat.Entry.customBefore(
-              "display held item lighting", "Grass Detail",
-              ()
-                  -> createLegacyGrassDetailSlider(mod, cfg, values, getMode,
-                                                   setMode, save),
-              ()
-                  -> Component.literal("Choose how detailed grass and snow "
-                                       + "edges should appear.")));
-        }
-      }
-    }
-
-    if (section == ModSettingsCompat.Section.ADVANCED_GRAPHICS &&
-        ModSettingsConfig.get().showSnowLayerBlending) {
-      RefUtil.MethodRef hasBetterLayer =
-          RefUtil.method(cfg.getClass(), "hasBetterLayer");
-      RefUtil.MethodRef setBetterLayer =
-          RefUtil.method(cfg.getClass(), "setBetterLayer", boolean.class);
-      RefUtil.MethodRef save = RefUtil.method(cfg.getClass(), "save");
-      if (hasBetterLayer != null && setBetterLayer != null) {
-        entries.add(ModSettingsCompat.Entry.toggleBefore(
-            "enhanced item translucency",
-            ()
-                -> Component.literal("Snow Layer Blending"),
-            ()
-                -> {
-              boolean next = !RefUtil.invokeBoolean(hasBetterLayer, cfg, true);
-              setBetterLayer.invoke(cfg, next);
-              RefUtil.invoke(save, cfg);
-              triggerRefresh(mod, cfg);
-            },
-            ()
-                -> RefUtil.invokeBoolean(hasBetterLayer, cfg, true),
-            ()
-                -> Component.literal(
-                    "Blend snow layers more smoothly with nearby blocks.")));
-      }
-    }
+    if (ModSettingsConfig.get().showSnowLayerBlending)
+      addSnowBlendingEntry(entries, cfg);
   }
 
-  private static void triggerRefresh(Object mod, Object cfg) {
-    if (cfg != null) {
-      for (String methodName : new String[] {
-               "reload",
-               "reloadRenderer",
-               "onConfigChanged",
-               "onConfigChange",
-           }) {
-        RefUtil.MethodRef m = RefUtil.method(cfg.getClass(), methodName);
-        if (m != null) {
-          m.invoke(cfg);
-          break;
-        }
-      }
-    }
+  private static void addGrassDetailEntry(List<ModSettingsCompat.Entry> entries,
+                                          Object mod, Object cfg) {
+    Class<?> modeClass =
+        RefUtil.classForName("dev.lambdaurora.lambdabettergrass.LBGMode");
+    RefUtil.MethodRef getMode = RefUtil.method(cfg.getClass(), "getMode");
+    RefUtil.MethodRef setMode =
+        modeClass == null
+            ? null
+            : RefUtil.method(cfg.getClass(), "setMode", modeClass);
+    RefUtil.MethodRef save = RefUtil.method(cfg.getClass(), "save");
 
-    if (mod != null) {
-      for (String methodName : new String[] {
-               "reload",
-               "reloadRenderer",
-               "onConfigChanged",
-               "onConfigChange",
-           }) {
-        RefUtil.MethodRef m = RefUtil.method(mod.getClass(), methodName);
-        if (m != null) {
-          m.invoke(mod);
-          break;
-        }
-      }
-    }
+    if (getMode == null || setMode == null || modeClass == null ||
+        !modeClass.isEnum())
+      return;
 
+    Object[] values = modeClass.getEnumConstants();
+    if (values == null || values.length == 0)
+      return;
+
+    entries.add(ModSettingsCompat.Entry.customBefore(
+        "display held item lighting", "Grass Detail",
+        ()
+            -> buildGrassSlider(mod, cfg, values, getMode, setMode, save),
+        ()
+            -> Component.literal(
+                "Choose how detailed grass and snow edges should appear.")));
+  }
+
+  // Snow Layer Blending — simple on/off toggle
+  private static void
+  addSnowBlendingEntry(List<ModSettingsCompat.Entry> entries, Object cfg) {
+    RefUtil.MethodRef hasBetterLayer =
+        RefUtil.method(cfg.getClass(), "hasBetterLayer");
+    RefUtil.MethodRef setBetterLayer =
+        RefUtil.method(cfg.getClass(), "setBetterLayer", boolean.class);
+    RefUtil.MethodRef save = RefUtil.method(cfg.getClass(), "save");
+    if (hasBetterLayer == null || setBetterLayer == null)
+      return;
+
+    entries.add(ModSettingsCompat.Entry.toggleBefore(
+        "enhanced item translucency",
+        ()
+            -> Component.literal("Snow Layer Blending"),
+        ()
+            -> {
+          boolean next = !RefUtil.invokeBoolean(hasBetterLayer, cfg, true);
+          setBetterLayer.invoke(cfg, next);
+          RefUtil.invoke(save, cfg);
+          reloadRenderer();
+        },
+        ()
+            -> RefUtil.invokeBoolean(hasBetterLayer, cfg, true),
+        ()
+            -> Component.literal(
+                "Blend snow layers more smoothly with nearby blocks.")));
+  }
+
+  // reload.
+  private static void reloadRenderer() {
     Minecraft mc = Minecraft.getInstance();
-    if (mc != null) {
-      if (mc.levelRenderer != null)
-        mc.levelRenderer.allChanged();
-      if (mc.options != null)
-        mc.options.save();
-    }
+    if (mc != null && mc.levelRenderer != null)
+      mc.levelRenderer.allChanged();
   }
 
-  private static Object createLegacyGrassDetailSlider(Object mod, Object cfg,
-                                                      Object[] values,
-                                                      RefUtil.MethodRef getMode,
-                                                      RefUtil.MethodRef setMode,
-                                                      RefUtil.MethodRef save) {
+  private static Object buildGrassSlider(Object mod, Object cfg,
+                                         Object[] values,
+                                         RefUtil.MethodRef getMode,
+                                         RefUtil.MethodRef setMode,
+                                         RefUtil.MethodRef save) {
     Class<?> sliderClass =
         RefUtil.classForName("wily.legacy.client.screen.LegacySliderButton");
     if (sliderClass == null)
       return null;
 
-    Constructor<?> ctor = findCtorByParamCount(sliderClass, 10);
+    Constructor<?> ctor = findCtor(sliderClass, 10);
     if (ctor == null)
       return null;
 
@@ -141,56 +123,46 @@ final class LambdaBetterGrassCompat {
     if (initial == null)
       initial = values[0];
 
-    Supplier<List<Object>> valueListSupplier =
+    Supplier<List<Object>> valueList =
         () -> Arrays.asList(Arrays.copyOf(values, values.length));
-
-    Function<Object, Component> messageGetter = slider
-        -> Component.literal("Grass Detail: " +
-                             RefUtil.prettyEnumName(getLegacySliderObjectValue(
-                                 slider, getMode.invoke(cfg))));
-
-    Function<Object, Tooltip> tooltipSupplier = slider -> null;
-
+    Function<Object, Component> label = slider
+        -> Component.literal(
+            "Grass Detail: " +
+            RefUtil.prettyEnumName(sliderValue(slider, getMode.invoke(cfg))));
+    Function<Object, Tooltip> noTooltip = slider -> null;
     Consumer<Object> onChange = slider -> {
-      Object next = getLegacySliderObjectValue(slider, getMode.invoke(cfg));
+      Object next = sliderValue(slider, getMode.invoke(cfg));
       if (next == null)
         return;
       setMode.invoke(cfg, next);
       RefUtil.invoke(save, cfg);
-      triggerRefresh(mod, cfg);
+      reloadRenderer();
     };
-
-    Supplier<Object> currentSupplier = () -> getMode.invoke(cfg);
+    Supplier<Object> current = () -> getMode.invoke(cfg);
 
     try {
       ctor.setAccessible(true);
-      return ctor.newInstance(0, 0, 200, 16, messageGetter, tooltipSupplier,
-                              initial, valueListSupplier, onChange,
-                              currentSupplier);
+      return ctor.newInstance(0, 0, 200, 16, label, noTooltip, initial,
+                              valueList, onChange, current);
     } catch (Exception e) {
       return null;
     }
   }
 
-  private static Object getLegacySliderObjectValue(Object slider,
-                                                   Object fallback) {
+  private static Object sliderValue(Object slider, Object fallback) {
     if (slider == null)
       return fallback;
-
-    RefUtil.MethodRef getObjectValue =
-        RefUtil.method(slider.getClass(), "getObjectValue");
-    if (getObjectValue == null)
+    RefUtil.MethodRef get = RefUtil.method(slider.getClass(), "getObjectValue");
+    if (get == null)
       return fallback;
-    Object value = getObjectValue.invoke(slider);
-    return value == null ? fallback : value;
+    Object val = get.invoke(slider);
+    return val != null ? val : fallback;
   }
 
-  private static Constructor<?> findCtorByParamCount(Class<?> type,
-                                                     int paramCount) {
-    for (Constructor<?> ctor : type.getDeclaredConstructors()) {
-      if (ctor.getParameterCount() == paramCount)
-        return ctor;
-    }
+  private static Constructor<?> findCtor(Class<?> cls, int paramCount) {
+    for (Constructor<?> c : cls.getDeclaredConstructors())
+      if (c.getParameterCount() == paramCount)
+        return c;
     return null;
   }
 }

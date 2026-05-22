@@ -18,8 +18,6 @@ public abstract class MixinLocatorWaypointTracking {
   private static void
   unifiedLegacySettings$blockWaypointsFromPlayer(
       Player player, CallbackInfoReturnable<List<?>> cir) {
-    // Short-circuit at HEAD so disabled locator mode never seeds fresh player
-    // waypoints.
     if (!LocatorLodestonesCompat.isRuntimeEnabled()) {
       cir.setReturnValue(Collections.emptyList());
     }

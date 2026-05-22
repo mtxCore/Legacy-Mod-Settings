@@ -26,8 +26,9 @@ Unified Legacy Settings adds optional mod toggles directly to Legacy4J menu scre
 ## Configuration
 
 Open Mod Menu -> Unified Legacy Settings -> Config.
+You can also open it from the Unified Legacy Settings entry in Legacy4J's
+Advanced User Interface screen.
 Settings are written to `config/unified_legacy_settings.json`.
-The Mod Menu config screen is available when Cloth Config is installed.
 
 ## Build
 
@@ -54,12 +55,12 @@ Java is selected by Gradle toolchains. For `buildAll`, set one of these only if 
 - Fabric API
 - Legacy4J
 
-Cloth Config and integrated mods remain optional.
+Mod Menu and integrated mods remain optional.
 
 ## Adding an Integration
 
 1. Add a compat class in `src/main/java/com/mtxcore/unifiedlegacysettings`.
 2. Add the config toggle in `ModSettingsConfig`.
 3. Register the entries in `ModSettingsCompat`.
-4. Add the config UI toggle in `ClothConfigScreenFactory`.
+4. Add the config UI toggle in `NativeConfigScreen`.
 5. Add the mod id in `src/main/resources/fabric.mod.json` `suggests` when the integration target is a mod.

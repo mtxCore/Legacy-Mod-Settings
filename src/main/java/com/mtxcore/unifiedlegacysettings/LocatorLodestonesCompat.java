@@ -6,8 +6,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import net.fabricmc.loader.api.FabricLoader;
@@ -18,25 +20,26 @@ public final class LocatorLodestonesCompat {
   private static final Gson GSON =
       new GsonBuilder().setPrettyPrinting().create();
 
-  private static final String[] SETTING_FIELDS = {
+  // The three boolean config fields we flip together
+  private static final String[] BOOL_FIELDS = {
       "TAB_SHOWS_NAMES",
       "SHOW_RECOVERY_COMPASSES",
       "SHOW_BUNDLED_COMPASSES",
   };
-  private static final String TAB_DISPLAY_FIELD = "TAB_DISPLAY";
+
   private static Boolean locatorDesired;
 
   private LocatorLodestonesCompat() {}
 
-  private static Boolean desiredLocatorState() {
-    if (locatorDesired != null)
-      return locatorDesired;
-    return ModSettingsConfig.get().locatorCompassEnabled;
+  private static Boolean desiredState() {
+    return locatorDesired != null
+        ? locatorDesired
+        : ModSettingsConfig.get().locatorCompassEnabled;
   }
 
   public static boolean isRuntimeEnabled() {
-    Boolean desired = desiredLocatorState();
-    return desired == null || desired;
+    Boolean d = desiredState();
+    return d == null || d;
   }
 
   static void addEntries(ModSettingsCompat.Section section,
@@ -59,26 +62,21 @@ public final class LocatorLodestonesCompat {
             -> Component.literal("Locator Compass"),
         ()
             -> {
-          boolean next = !getLocatorEnabled(settings);
+          boolean next = !isEnabled(settings);
           locatorDesired = next;
-          RefUtil.persistModDesired(locatorDesired,
+          RefUtil.persistModDesired(next,
                                     RefUtil.PersistKey.LOCATOR_LODESTONES);
-          setTabDisplayEnabled(next);
-          for (Object setting : settings) {
-            setSettingEnabled(setting, next);
-          }
-          refreshWaypoints(next);
-          updateLocatorConfigFile(next);
+          applyAll(settings, next);
         },
         ()
-            -> getLocatorEnabled(settings),
+            -> isEnabled(settings),
         ()
             -> Component.literal("Enable or disable all locator compass HUD "
                                  + "waypoints at once.")));
   }
 
   static void enforceRuntimeState() {
-    Boolean desired = desiredLocatorState();
+    Boolean desired = desiredState();
     if (desired == null)
       return;
     locatorDesired = desired;
@@ -86,31 +84,27 @@ public final class LocatorLodestonesCompat {
       return;
 
     Object[] settings = resolveSettings();
-    boolean tabEnabled = isTabDisplayEnabled();
-    boolean booleansEnabled = areAllEnabled(settings);
-    boolean needsModeUpdate = tabEnabled != locatorDesired;
-    boolean needsBooleanUpdate = booleansEnabled != locatorDesired;
-    if (!needsModeUpdate && !needsBooleanUpdate)
+    boolean tabOk = isTabDisplayEnabled() == desired;
+    boolean boolOk = areAllEnabled(settings) == desired;
+    if (tabOk && boolOk)
       return;
 
+    applyAll(settings, desired);
+  }
 
-    if (needsModeUpdate) {
-      setTabDisplayEnabled(locatorDesired);
-    }
-    if (needsBooleanUpdate) {
-      for (Object setting : settings) {
-        setSettingEnabled(setting, locatorDesired);
-      }
-    }
-    refreshWaypoints(locatorDesired);
-    updateLocatorConfigFile(locatorDesired);
+  private static void applyAll(Object[] settings, boolean enabled) {
+    setTabDisplayEnabled(enabled);
+    for (Object s : settings)
+      setSettingEnabled(s, enabled);
+    markWaypointsDirty();
+    writeConfigFile(enabled);
   }
 
   private static Object[] resolveSettings() {
-    return java.util.Arrays.stream(SETTING_FIELDS)
-        .map(field
+    return Arrays.stream(BOOL_FIELDS)
+        .map(f
              -> RefUtil.staticField(
-                 "net.pneumono.locator_lodestones.config.ConfigManager", field))
+                 "net.pneumono.locator_lodestones.config.ConfigManager", f))
         .filter(Objects::nonNull)
         .toArray();
   }
@@ -118,50 +112,38 @@ public final class LocatorLodestonesCompat {
   private static boolean areAllEnabled(Object[] settings) {
     if (settings.length == 0)
       return false;
-    for (Object setting : settings) {
-      if (!readSettingEnabled(setting)) {
+    for (Object s : settings)
+      if (!readBoolean(s))
         return false;
-      }
-    }
     return true;
   }
 
-  private static boolean getLocatorEnabled(Object[] settings) {
-    Boolean desired = desiredLocatorState();
+  private static boolean isEnabled(Object[] settings) {
+    Boolean desired = desiredState();
     if (desired != null)
       return desired;
     return isTabDisplayEnabled() && areAllEnabled(settings);
   }
 
   private static boolean isTabDisplayEnabled() {
-    Object value = readTabDisplayValue();
-    return value != null && "DEFAULT".equals(value.toString());
+    Object val = readTabDisplayValue();
+    return val != null && "DEFAULT".equals(val.toString());
   }
 
   private static Object readTabDisplayValue() {
-    RefUtil.MethodRef tabDisplaySetting = RefUtil.staticMethod(
-        "net.pneumono.locator_lodestones.config.ConfigManager",
-        "tabDisplaySetting");
-    Object directValue =
-        tabDisplaySetting == null ? null : tabDisplaySetting.invokeStatic();
-    if (directValue != null)
-      return directValue;
-
     Object tabDisplay = RefUtil.staticField(
-        "net.pneumono.locator_lodestones.config.ConfigManager",
-        TAB_DISPLAY_FIELD);
+        "net.pneumono.locator_lodestones.config.ConfigManager", "TAB_DISPLAY");
     if (tabDisplay == null)
       return null;
-
-    RefUtil.MethodRef getValue =
-        RefUtil.method(tabDisplay.getClass(), "getValue");
-    return getValue == null ? null : getValue.invoke(tabDisplay);
+    RefUtil.MethodRef get = RefUtil.method(tabDisplay.getClass(), "getValue");
+    if (get == null)
+      get = RefUtil.method(tabDisplay.getClass(), "get");
+    return get == null ? null : get.invoke(tabDisplay);
   }
 
   private static void setTabDisplayEnabled(boolean enabled) {
     Object tabDisplay = RefUtil.staticField(
-        "net.pneumono.locator_lodestones.config.ConfigManager",
-        TAB_DISPLAY_FIELD);
+        "net.pneumono.locator_lodestones.config.ConfigManager", "TAB_DISPLAY");
     if (tabDisplay == null)
       return;
 
@@ -175,148 +157,105 @@ public final class LocatorLodestonesCompat {
     if (mode == null)
       return;
 
+    // PneumonoCore's config API wants a full setValue(value, LoadType, Server)
+    // call when available
     if (trySetInstant(tabDisplay, mode))
       return;
 
-    RefUtil.MethodRef setValue =
-        RefUtil.method(tabDisplay.getClass(), "setValue", Object.class);
-    if (setValue == null) {
-      setValue =
-          RefUtil.method(tabDisplay.getClass(), "setValue", mode.getClass());
-    }
-    if (setValue != null) {
-      setValue.invoke(tabDisplay, mode);
-      return;
-    }
-
     RefUtil.MethodRef set =
-        RefUtil.method(tabDisplay.getClass(), "set", Object.class);
-    if (set == null) {
-      set = RefUtil.method(tabDisplay.getClass(), "set", mode.getClass());
-    }
-    if (set != null) {
+        RefUtil.method(tabDisplay.getClass(), "setValue", Object.class);
+    if (set == null)
+      set = RefUtil.method(tabDisplay.getClass(), "set", Object.class);
+    if (set != null)
       set.invoke(tabDisplay, mode);
-    }
-
-    Object current = readTabDisplayValue();
   }
 
-  private static boolean readSettingEnabled(Object setting) {
-    RefUtil.MethodRef getValue = RefUtil.method(setting.getClass(), "getValue");
-    if (getValue != null) {
-      return RefUtil.invokeBoolean(getValue, setting, true);
-    }
-
-    RefUtil.MethodRef get = RefUtil.method(setting.getClass(), "get");
-    if (get != null) {
+  // Boolean helpers
+  private static boolean readBoolean(Object setting) {
+    RefUtil.MethodRef get = RefUtil.method(setting.getClass(), "getValue");
+    if (get == null)
+      get = RefUtil.method(setting.getClass(), "get");
+    if (get != null)
       return RefUtil.invokeBoolean(get, setting, true);
-    }
-
-    java.lang.reflect.Field value = RefUtil.field(setting.getClass(), "value");
-    if (value != null) {
-      return RefUtil.readBooleanField(setting, value, true);
-    }
-    return true;
+    Field f = RefUtil.field(setting.getClass(), "value");
+    return f != null && RefUtil.readBooleanField(setting, f, true);
   }
 
   private static void setSettingEnabled(Object setting, boolean enabled) {
     if (setting == null)
       return;
-
     if (trySetInstant(setting, enabled))
       return;
 
-    RefUtil.MethodRef setValue =
-        RefUtil.method(setting.getClass(), "setValue", boolean.class);
-    if (setValue == null)
-      setValue = RefUtil.method(setting.getClass(), "setValue", Boolean.class);
-    if (setValue != null) {
-      setValue.invoke(setting, enabled);
-      return;
-    }
-
     RefUtil.MethodRef set =
-        RefUtil.method(setting.getClass(), "set", boolean.class);
+        RefUtil.method(setting.getClass(), "setValue", boolean.class);
     if (set == null)
-      set = RefUtil.method(setting.getClass(), "set", Boolean.class);
+      set = RefUtil.method(setting.getClass(), "set", boolean.class);
     if (set != null) {
       set.invoke(setting, enabled);
       return;
     }
 
-    RefUtil.MethodRef enableMethod =
+    RefUtil.MethodRef toggle =
         RefUtil.method(setting.getClass(), enabled ? "enable" : "disable");
-    if (enableMethod != null) {
-      enableMethod.invoke(setting);
+    if (toggle != null) {
+      toggle.invoke(setting);
       return;
     }
 
-    java.lang.reflect.Field value = RefUtil.field(setting.getClass(), "value");
-    if (value != null) {
-      RefUtil.writeField(setting, value, enabled);
-    }
+    Field f = RefUtil.field(setting.getClass(), "value");
+    if (f != null)
+      RefUtil.writeField(setting, f, enabled);
   }
 
-  private static boolean trySetInstant(Object setting, boolean enabled) {
-    return trySetInstant(setting, Boolean.valueOf(enabled));
-  }
-
+  // PneumonoCore 2.x exposes a static ConfigManager.setValue(config, value,
+  // LoadType.INSTANT, null)
   private static boolean trySetInstant(Object setting, Object value) {
-    Class<?> abstractConfigClass =
+    Class<?> abstractCfg =
         RefUtil.classForName("net.pneumono.pneumonocore.config_api."
                              + "configurations.AbstractConfiguration");
     Class<?> loadTypeClass = RefUtil.classForName(
         "net.pneumono.pneumonocore.config_api.enums.LoadType");
     Class<?> serverClass =
         RefUtil.classForName("net.minecraft.server.MinecraftServer");
+    if (abstractCfg == null || loadTypeClass == null || serverClass == null)
+      return false;
 
-    RefUtil.MethodRef setInstantValue =
-        (abstractConfigClass != null && loadTypeClass != null &&
-         serverClass != null)
-            ? RefUtil.staticMethod("net.pneumono.pneumonocore.config_api."
-                                       + "configurations.ConfigManager",
-                                   "setValue", abstractConfigClass,
-                                   Object.class, loadTypeClass, serverClass)
-            : null;
-    Object loadTypeInstant =
-        loadTypeClass != null ? RefUtil.enumConstant(loadTypeClass, "INSTANT")
-                              : null;
+    RefUtil.MethodRef setInstant = RefUtil.staticMethod(
+        "net.pneumono.pneumonocore.config_api.configurations.ConfigManager",
+        "setValue", abstractCfg, Object.class, loadTypeClass, serverClass);
+    Object instant = RefUtil.enumConstant(loadTypeClass, "INSTANT");
+    if (setInstant == null || instant == null)
+      return false;
 
-    if (setInstantValue != null && loadTypeInstant != null) {
-      setInstantValue.invokeStatic(setting, value, loadTypeInstant, null);
-      return true;
-    }
-
-    return false;
+    setInstant.invokeStatic(setting, value, instant, null);
+    return true;
   }
 
-  private static void refreshWaypoints(boolean enabled) {
-    // markWaypointsDirty preserves the previous waypoint set long enough for
-    // untracking to run cleanly.
+  private static void markWaypointsDirty() {
     RefUtil.invoke(
         RefUtil.staticMethod("net.pneumono.locator_lodestones.WaypointTracking",
                              "markWaypointsDirty"),
         null);
   }
 
-  private static void updateLocatorConfigFile(boolean enabled) {
+  // Write directly to the JSON config so changes survive a restart even if
+  // the in-memory objects don't flush themselves.
+  private static void writeConfigFile(boolean enabled) {
     Path file = FabricLoader.getInstance().getGameDir().resolve(
         "config/locator_lodestones.json");
     if (!Files.exists(file))
       return;
-
     try {
       JsonElement root = JsonParser.parseString(Files.readString(file));
       if (!(root instanceof JsonObject obj))
         return;
-
       obj.addProperty("tab_shows_names", enabled);
       obj.addProperty("show_recovery_compasses", enabled);
       obj.addProperty("show_bundled_compasses", enabled);
       obj.addProperty("tab_display", enabled ? "DEFAULT" : "TAB_ONLY");
-
       Files.writeString(file, GSON.toJson(obj));
-    } catch (IOException e) {
+    } catch (IOException ignored) {
     }
   }
 }

@@ -19,7 +19,7 @@ public final class AdvancementScreenshotCompat {
 
   static void addEntries(ModSettingsCompat.Section section,
                          List<ModSettingsCompat.Entry> entries) {
-    if (section != ModSettingsCompat.Section.ADVANCED_USER_INTERFACE)
+    if (!ModSettingsCompat.matchesUserInterfaceSection(section))
       return;
     if (!ModSettingsConfig.get().showAdvancementScreenshot)
       return;

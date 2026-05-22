@@ -75,7 +75,8 @@ and options.
 ## <img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/L_config.png" alt="Configuration" width="450" height="40">
 
 You can tweak things through **Mod Menu → Unified Legacy Settings → Config**
-when **Cloth Config** is installed.
+or the Unified Legacy Settings entry in Legacy4J's Advanced User Interface
+screen.
 
 ---
 
@@ -87,7 +88,7 @@ Everything listed under Supported Mods is optional. The following are required:
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 - [Legacy4J](https://modrinth.com/mod/legacy4j)
 
-Cloth Config is optional and only needed for the Mod Menu config screen.
+Mod Menu is optional and only needed for the Mod Menu config shortcut.
 
 ---
 

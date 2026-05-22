@@ -9,9 +9,17 @@ import java.util.function.Function;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 
+// Reflection helpers and shit
 final class RefUtil {
 
   private RefUtil() {}
+
+  enum PersistKey {
+    XAERO_MINIMAP,
+    LOCATOR_LODESTONES,
+    CONTINUITY,
+    ZOOM,
+  }
 
   static boolean isModLoaded(String... ids) {
     FabricLoader loader = FabricLoader.getInstance();
@@ -22,10 +30,12 @@ final class RefUtil {
     return false;
   }
 
+  // Go through the class hierarchy to find a field with the given name, and
+  // make it accessible
   static Field field(Class<?> cls, String name) {
-    for (Class<?> cur = cls; cur != null; cur = cur.getSuperclass()) {
+    for (Class<?> c = cls; c != null; c = c.getSuperclass()) {
       try {
-        Field f = cur.getDeclaredField(name);
+        Field f = c.getDeclaredField(name);
         f.setAccessible(true);
         return f;
       } catch (NoSuchFieldException ignored) {
@@ -34,71 +44,49 @@ final class RefUtil {
     return null;
   }
 
-  static Object readField(Object target, Field field) {
-    if (field == null)
+  static Object readField(Object target, Field f) {
+    if (f == null)
       return null;
     try {
-      return field.get(target);
-    } catch (Exception ignored) {
+      return f.get(target);
+    } catch (Exception e) {
       return null;
     }
   }
-  enum PersistKey {
-    XAERO_MINIMAP,
-    LOCATOR_LODESTONES,
-    CONTINUITY,
-    ZOOM,
-  }
 
-  static void persistModDesired(Boolean enabled, PersistKey mod) {
-    ModSettingsConfig.mutateAndSave(cfg -> {
-      switch (mod) {
-      case XAERO_MINIMAP -> cfg.xaeroMinimapEnabled = enabled;
-      case LOCATOR_LODESTONES -> cfg.locatorCompassEnabled = enabled;
-      case CONTINUITY -> cfg.continuityConnectedTexturesEnabled = enabled;
-      case ZOOM -> cfg.zoomEnabled = enabled;
-      }
-    });
-  }
-
-  static void writeField(Object target, Field field, Object value) {
-    if (field == null)
+  static void writeField(Object target, Field f, Object value) {
+    if (f == null)
       return;
     try {
-      field.set(target, value);
-    } catch (Exception e) {
+      f.set(target, value);
+    } catch (Exception ignored) {
     }
   }
 
-  static Object instanceField(Object target, String fieldName) {
+  static Object instanceField(Object target, String name) {
     if (target == null)
       return null;
-    Field f = field(target.getClass(), fieldName);
-    return readField(target, f);
+    return readField(target, field(target.getClass(), name));
   }
 
-  static Object staticField(String className, String fieldName) {
+  static Object staticField(String className, String name) {
     Class<?> cls = classForName(className);
     if (cls == null)
       return null;
-    Field f = field(cls, fieldName);
-    return readField(null, f);
+    return readField(null, field(cls, name));
   }
 
+  // Prefer the public API
   static MethodRef method(Class<?> cls, String name, Class<?>... params) {
     if (cls == null)
       return null;
     try {
-      // Prefer public lookup first so inherited/interface APIs keep working
-      // across mod updates.
       Method m = cls.getMethod(name, params);
       m.setAccessible(true);
       return new MethodRef(m, false);
     } catch (NoSuchMethodException ignored) {
     }
     try {
-      // Fall back to declared lookup for private/protected internals used by
-      // older builds.
       Method m = cls.getDeclaredMethod(name, params);
       m.setAccessible(true);
       return new MethodRef(m, false);
@@ -114,8 +102,6 @@ final class RefUtil {
   static MethodRef staticMethod(String className, String name,
                                 Class<?>... params) {
     Class<?> cls = classForName(className);
-    if (cls == null)
-      return null;
     MethodRef ref = method(cls, name, params);
     return ref == null ? null : new MethodRef(ref.method(), true);
   }
@@ -125,7 +111,7 @@ final class RefUtil {
       return null;
     try {
       return Class.forName(name);
-    } catch (Throwable ignored) {
+    } catch (Throwable t) {
       return null;
     }
   }
@@ -159,21 +145,19 @@ final class RefUtil {
     return value instanceof Boolean b ? b : fallback;
   }
 
-  static boolean readBooleanField(Object target, Field field,
-                                  boolean fallback) {
-    return asBool(readField(target, field), fallback);
+  static boolean readBooleanField(Object target, Field f, boolean fallback) {
+    return asBool(readField(target, f), fallback);
   }
 
-  static boolean invokeBoolean(MethodRef methodRef, Object target,
-                               boolean fallback, Object... args) {
-    return asBool(invoke(methodRef, target, args), fallback);
-  }
-
-  static Object invoke(MethodRef methodRef, Object target, Object... args) {
-    if (methodRef == null)
+  static Object invoke(MethodRef ref, Object target, Object... args) {
+    if (ref == null)
       return null;
-    return methodRef.isStatic() ? methodRef.invokeStatic(args)
-                                : methodRef.invoke(target, args);
+    return ref.isStatic() ? ref.invokeStatic(args) : ref.invoke(target, args);
+  }
+
+  static boolean invokeBoolean(MethodRef ref, Object target, boolean fallback,
+                               Object... args) {
+    return asBool(invoke(ref, target, args), fallback);
   }
 
   static boolean legacySettingsMenusEnabled() {
@@ -185,6 +169,7 @@ final class RefUtil {
     return getter != null && asBool(getter.invoke(option), false);
   }
 
+  // Pull the display label off any widget type
   static Component widgetMessage(Object widget) {
     if (widget == null)
       return null;
@@ -203,35 +188,16 @@ final class RefUtil {
 
     if (val instanceof Component c)
       return c;
-
-    if (val instanceof Function<?, ?> fn) {
-      try {
-        // Some Legacy4J widgets expose label suppliers instead of a concrete
-        // message field.
-        @SuppressWarnings("unchecked")
-        Object res = ((Function<Boolean, Component>)fn).apply(Boolean.TRUE);
-        if (res instanceof Component c)
-          return c;
-      } catch (Exception ignored) {
-      }
-    }
-
-    return null;
-  }
-
-  static boolean hasMessageText(List<Object> renderables, String needle) {
-    if (needle == null || needle.isBlank() || renderables == null)
-      return false;
-    String lo = needle.toLowerCase(Locale.ROOT);
-    for (Object widget : renderables) {
-      Component msg = widgetMessage(widget);
-      if (msg != null) {
-        String text = msg.getString();
-        if (text != null && text.toLowerCase(Locale.ROOT).contains(lo))
-          return true;
-      }
-    }
-    return false;
+        if (val instanceof Function<?, ?> fn) {
+          try {
+            @SuppressWarnings("unchecked")
+            Object res = ((Function<Boolean, Component>)fn).apply(Boolean.TRUE);
+            if (res instanceof Component c)
+              return c;
+          } catch (Exception ignored) {
+          }
+        }
+        return null;
   }
 
   static boolean hasAnyMessageText(List<Object> renderables,
@@ -239,8 +205,6 @@ final class RefUtil {
     if (renderables == null || renderables.isEmpty() || needles == null)
       return false;
 
-    // Normalize once to keep per-widget matching cheap while scanning full
-    // option lists.
     String[] normalized = Arrays.stream(needles)
                               .filter(s -> s != null && !s.isBlank())
                               .map(s -> s.toLowerCase(Locale.ROOT))
@@ -264,15 +228,25 @@ final class RefUtil {
     return false;
   }
 
+  static void persistModDesired(Boolean enabled, PersistKey mod) {
+    ModSettingsConfig.mutateAndSave(cfg -> {
+      switch (mod) {
+      case XAERO_MINIMAP -> cfg.xaeroMinimapEnabled = enabled;
+      case LOCATOR_LODESTONES -> cfg.locatorCompassEnabled = enabled;
+      case CONTINUITY -> cfg.continuityConnectedTexturesEnabled = enabled;
+      case ZOOM -> cfg.zoomEnabled = enabled;
+      }
+    });
+  }
+
   record MethodRef(Method method, boolean isStatic) {
     Object invoke(Object target, Object... args) {
       try {
         return method.invoke(target, args);
-      } catch (Exception ignored) {
+      } catch (Exception e) {
         return null;
       }
     }
-
     Object invokeStatic(Object... args) {
       return isStatic ? invoke(null, args) : null;
     }

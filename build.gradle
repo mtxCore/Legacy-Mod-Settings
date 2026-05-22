@@ -16,7 +16,8 @@ def versions = [
         loader:    "0.15.11",
         fabricApi: "0.116.7+1.21.1",
         iris:      "1.8.8+1.21.1-fabric",
-        cloth:     "15.0.140",
+        legacy4j:  "1.21.1-1.8.6-lts+fabric",
+        factoryApi:"1.21.1-2.2.8-fabric",
         modmenu:   "11.0.3",
         java:      21
     ],
@@ -24,7 +25,8 @@ def versions = [
         loader:    "0.16.13",
         fabricApi: "0.136.1+1.21.8",
         iris:      "1.9.6+1.21.8-fabric",
-        cloth:     "19.0.147",
+        legacy4j:  "1.21.8-1.8.5+fabric",
+        factoryApi:"1.21.8-2.2.8-fabric",
         modmenu:   "15.0.1",
         java:      21
     ],
@@ -32,7 +34,8 @@ def versions = [
         loader:    "0.17.0",
         fabricApi: "0.138.4+1.21.10",
         iris:      "1.9.7+1.21.10-fabric",
-        cloth:     "20.0.149",
+        legacy4j:  "1.21.10-1.8.7+fabric",
+        factoryApi:"1.21.10-2.2.8-fabric",
         modmenu:   "16.0.1",
         java:      21
     ],
@@ -40,7 +43,8 @@ def versions = [
         loader:         "0.18.4",
         fabricApi:      "0.148.0+26.1.2",
         iris:           "1.10.9+26.1-fabric",
-        cloth:          "26.1.154",
+        legacy4j:       "26.1.2-1.9-pre-2-fabric",
+        factoryApi:     "26.1.2-2.2.8-fabric",
         modmenu:        "18.0.0-alpha.8",
         java:           25,
         nonObfuscated:  true
@@ -81,7 +85,6 @@ base {
 repositories {
     mavenCentral()
     maven { url = "https://maven.fabricmc.net/" }
-    maven { url = "https://maven.shedaniel.me/" }
 
     exclusiveContent {
         forRepository {
@@ -107,7 +110,8 @@ dependencies {
     "${implConfig}" "net.fabricmc.fabric-api:fabric-api:${v.fabricApi}"
 
     "${compileOnlyConf}" "maven.modrinth:iris:${v.iris}"
-    "${compileOnlyConf}" "me.shedaniel.cloth:cloth-config-fabric:${v.cloth}"
+    "${compileOnlyConf}" "maven.modrinth:legacy4j:${v.legacy4j}"
+    "${compileOnlyConf}" "maven.modrinth:factory-api:${v.factoryApi}"
 
     "${compileOnlyConf}" "maven.modrinth:modmenu:${v.modmenu}"
 }
@@ -127,7 +131,6 @@ processResources {
     inputs.property "mc_version",            targetMc
     inputs.property "fabric_loader_version", v.loader
     inputs.property "fabric_api_version",    v.fabricApi
-    inputs.property "cloth_config_version",  v.cloth
     inputs.property "modmenu_version",       v.modmenu
     inputs.property "iris_version",          v.iris
 
@@ -137,7 +140,6 @@ processResources {
             mc_version:            targetMc,
             fabric_loader_version: v.loader,
             fabric_api_version:    v.fabricApi,
-            cloth_config_version:  v.cloth,
             modmenu_version:       v.modmenu,
             iris_version:          v.iris
         )

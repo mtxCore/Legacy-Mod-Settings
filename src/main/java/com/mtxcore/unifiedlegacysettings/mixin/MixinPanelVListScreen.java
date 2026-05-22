@@ -1,7 +1,8 @@
 package com.mtxcore.unifiedlegacysettings.mixin;
 
-import com.mtxcore.unifiedlegacysettings.UnifiedLegacySettings;
+import com.mtxcore.unifiedlegacysettings.LegacyWidgetFactory;
 import com.mtxcore.unifiedlegacysettings.ModSettingsCompat;
+import com.mtxcore.unifiedlegacysettings.UnifiedLegacySettings;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Collections;
@@ -14,7 +15,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
@@ -243,17 +244,15 @@ public abstract class MixinPanelVListScreen {
   }
 
   @Unique
-  private static Button
+  private static AbstractWidget
   unifiedLegacySettings$createCycleButton(Supplier<Component> label,
                                       Runnable onActivate) {
-    return Button
-        .builder(label.get(),
-                 btn -> {
-                   onActivate.run();
-                   btn.setMessage(label.get());
-                 })
-        .bounds(0, 0, 200, 20)
-        .build();
+    return LegacyWidgetFactory.button(
+        0, 0, 200, 20, label.get(),
+        btn -> {
+          onActivate.run();
+          btn.setMessage(label.get());
+        });
   }
 
   @Unique
