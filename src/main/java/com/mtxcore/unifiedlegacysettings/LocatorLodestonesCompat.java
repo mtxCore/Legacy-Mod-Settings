@@ -6,7 +6,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -20,7 +19,8 @@ public final class LocatorLodestonesCompat {
   private static final Gson GSON =
       new GsonBuilder().setPrettyPrinting().create();
 
-  // The three boolean config fields we flip together
+  // These fields are the mod's HUD-facing switches; the compass tracking mixin
+  // reads the same desired state so we do not need to patch every waypoint type.
   private static final String[] BOOL_FIELDS = {
       "TAB_SHOWS_NAMES",
       "SHOW_RECOVERY_COMPASSES",
@@ -157,60 +157,21 @@ public final class LocatorLodestonesCompat {
     if (mode == null)
       return;
 
-    // PneumonoCore's config API wants a full setValue(value, LoadType, Server)
-    // call when available
-    if (trySetInstant(tabDisplay, mode))
-      return;
-
-    RefUtil.MethodRef set =
-        RefUtil.method(tabDisplay.getClass(), "setValue", Object.class);
-    if (set == null)
-      set = RefUtil.method(tabDisplay.getClass(), "set", Object.class);
-    if (set != null)
-      set.invoke(tabDisplay, mode);
+    setPneumonoConfig(tabDisplay, mode);
   }
 
-  // Boolean helpers
   private static boolean readBoolean(Object setting) {
     RefUtil.MethodRef get = RefUtil.method(setting.getClass(), "getValue");
-    if (get == null)
-      get = RefUtil.method(setting.getClass(), "get");
-    if (get != null)
-      return RefUtil.invokeBoolean(get, setting, true);
-    Field f = RefUtil.field(setting.getClass(), "value");
-    return f != null && RefUtil.readBooleanField(setting, f, true);
+    return get == null || RefUtil.invokeBoolean(get, setting, true);
   }
 
   private static void setSettingEnabled(Object setting, boolean enabled) {
     if (setting == null)
       return;
-    if (trySetInstant(setting, enabled))
-      return;
-
-    RefUtil.MethodRef set =
-        RefUtil.method(setting.getClass(), "setValue", boolean.class);
-    if (set == null)
-      set = RefUtil.method(setting.getClass(), "set", boolean.class);
-    if (set != null) {
-      set.invoke(setting, enabled);
-      return;
-    }
-
-    RefUtil.MethodRef toggle =
-        RefUtil.method(setting.getClass(), enabled ? "enable" : "disable");
-    if (toggle != null) {
-      toggle.invoke(setting);
-      return;
-    }
-
-    Field f = RefUtil.field(setting.getClass(), "value");
-    if (f != null)
-      RefUtil.writeField(setting, f, enabled);
+    setPneumonoConfig(setting, enabled);
   }
 
-  // PneumonoCore 2.x exposes a static ConfigManager.setValue(config, value,
-  // LoadType.INSTANT, null)
-  private static boolean trySetInstant(Object setting, Object value) {
+  private static void setPneumonoConfig(Object setting, Object value) {
     Class<?> abstractCfg =
         RefUtil.classForName("net.pneumono.pneumonocore.config_api."
                              + "configurations.AbstractConfiguration");
@@ -219,17 +180,16 @@ public final class LocatorLodestonesCompat {
     Class<?> serverClass =
         RefUtil.classForName("net.minecraft.server.MinecraftServer");
     if (abstractCfg == null || loadTypeClass == null || serverClass == null)
-      return false;
+      return;
 
     RefUtil.MethodRef setInstant = RefUtil.staticMethod(
         "net.pneumono.pneumonocore.config_api.configurations.ConfigManager",
         "setValue", abstractCfg, Object.class, loadTypeClass, serverClass);
     Object instant = RefUtil.enumConstant(loadTypeClass, "INSTANT");
     if (setInstant == null || instant == null)
-      return false;
+      return;
 
     setInstant.invokeStatic(setting, value, instant, null);
-    return true;
   }
 
   private static void markWaypointsDirty() {
@@ -256,6 +216,8 @@ public final class LocatorLodestonesCompat {
       obj.addProperty("tab_display", enabled ? "DEFAULT" : "TAB_ONLY");
       Files.writeString(file, GSON.toJson(obj));
     } catch (IOException ignored) {
+      // The live config has already been updated; losing the disk write just
+      // means Locator Lodestones will restore its own defaults next launch.
     }
   }
 }

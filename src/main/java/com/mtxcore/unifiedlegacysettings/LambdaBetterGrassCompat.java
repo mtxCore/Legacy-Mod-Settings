@@ -6,12 +6,9 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
-// Adds "Grass Detail" (LBGMode slider) and "Snow Layer Blending" (toggle) to
-// Advanced Graphics, wiring into LambdaBetterGrass's public config API.
 final class LambdaBetterGrassCompat {
 
   private LambdaBetterGrassCompat() {}
@@ -38,7 +35,7 @@ final class LambdaBetterGrassCompat {
       addGrassDetailEntry(entries, mod, cfg);
 
     if (ModSettingsConfig.get().showSnowLayerBlending)
-      addSnowBlendingEntry(entries, cfg);
+      addSnowBlendingEntry(entries, mod, cfg);
   }
 
   private static void addGrassDetailEntry(List<ModSettingsCompat.Entry> entries,
@@ -69,9 +66,9 @@ final class LambdaBetterGrassCompat {
                 "Choose how detailed grass and snow edges should appear.")));
   }
 
-  // Snow Layer Blending — simple on/off toggle
   private static void
-  addSnowBlendingEntry(List<ModSettingsCompat.Entry> entries, Object cfg) {
+  addSnowBlendingEntry(List<ModSettingsCompat.Entry> entries, Object mod,
+                       Object cfg) {
     RefUtil.MethodRef hasBetterLayer =
         RefUtil.method(cfg.getClass(), "hasBetterLayer");
     RefUtil.MethodRef setBetterLayer =
@@ -89,7 +86,7 @@ final class LambdaBetterGrassCompat {
           boolean next = !RefUtil.invokeBoolean(hasBetterLayer, cfg, true);
           setBetterLayer.invoke(cfg, next);
           RefUtil.invoke(save, cfg);
-          reloadRenderer();
+          reloadRenderer(mod);
         },
         ()
             -> RefUtil.invokeBoolean(hasBetterLayer, cfg, true),
@@ -98,11 +95,8 @@ final class LambdaBetterGrassCompat {
                 "Blend snow layers more smoothly with nearby blocks.")));
   }
 
-  // reload.
-  private static void reloadRenderer() {
-    Minecraft mc = Minecraft.getInstance();
-    if (mc != null && mc.levelRenderer != null)
-      mc.levelRenderer.allChanged();
+  private static void reloadRenderer(Object mod) {
+    RefUtil.invoke(RefUtil.method(mod.getClass(), "reload"), mod);
   }
 
   private static Object buildGrassSlider(Object mod, Object cfg,
@@ -128,15 +122,16 @@ final class LambdaBetterGrassCompat {
     Function<Object, Component> label = slider
         -> Component.literal(
             "Grass Detail: " +
-            RefUtil.prettyEnumName(sliderValue(slider, getMode.invoke(cfg))));
+            RefUtil.prettyEnumName(selectedSliderValue(
+                slider, getMode.invoke(cfg))));
     Function<Object, Tooltip> noTooltip = slider -> null;
     Consumer<Object> onChange = slider -> {
-      Object next = sliderValue(slider, getMode.invoke(cfg));
+      Object next = selectedSliderValue(slider, getMode.invoke(cfg));
       if (next == null)
         return;
       setMode.invoke(cfg, next);
       RefUtil.invoke(save, cfg);
-      reloadRenderer();
+      reloadRenderer(mod);
     };
     Supplier<Object> current = () -> getMode.invoke(cfg);
 
@@ -149,14 +144,14 @@ final class LambdaBetterGrassCompat {
     }
   }
 
-  private static Object sliderValue(Object slider, Object fallback) {
+  private static Object selectedSliderValue(Object slider, Object current) {
     if (slider == null)
-      return fallback;
+      return current;
     RefUtil.MethodRef get = RefUtil.method(slider.getClass(), "getObjectValue");
     if (get == null)
-      return fallback;
+      return current;
     Object val = get.invoke(slider);
-    return val != null ? val : fallback;
+    return val != null ? val : current;
   }
 
   private static Constructor<?> findCtor(Class<?> cls, int paramCount) {

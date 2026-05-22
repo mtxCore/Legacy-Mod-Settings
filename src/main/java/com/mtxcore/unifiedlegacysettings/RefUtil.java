@@ -9,7 +9,6 @@ import java.util.function.Function;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 
-// Reflection helpers and shit
 final class RefUtil {
 
   private RefUtil() {}
@@ -30,8 +29,6 @@ final class RefUtil {
     return false;
   }
 
-  // Go through the class hierarchy to find a field with the given name, and
-  // make it accessible
   static Field field(Class<?> cls, String name) {
     for (Class<?> c = cls; c != null; c = c.getSuperclass()) {
       try {
@@ -76,7 +73,6 @@ final class RefUtil {
     return readField(null, field(cls, name));
   }
 
-  // Prefer the public API
   static MethodRef method(Class<?> cls, String name, Class<?>... params) {
     if (cls == null)
       return null;
@@ -169,7 +165,6 @@ final class RefUtil {
     return getter != null && asBool(getter.invoke(option), false);
   }
 
-  // Pull the display label off any widget type
   static Component widgetMessage(Object widget) {
     if (widget == null)
       return null;
@@ -188,16 +183,16 @@ final class RefUtil {
 
     if (val instanceof Component c)
       return c;
-        if (val instanceof Function<?, ?> fn) {
-          try {
-            @SuppressWarnings("unchecked")
-            Object res = ((Function<Boolean, Component>)fn).apply(Boolean.TRUE);
-            if (res instanceof Component c)
-              return c;
-          } catch (Exception ignored) {
-          }
-        }
-        return null;
+    if (val instanceof Function<?, ?> fn) {
+      try {
+        @SuppressWarnings("unchecked")
+        Object res = ((Function<Boolean, Component>)fn).apply(Boolean.TRUE);
+        if (res instanceof Component c)
+          return c;
+      } catch (Exception ignored) {
+      }
+    }
+    return null;
   }
 
   static boolean hasAnyMessageText(List<Object> renderables,

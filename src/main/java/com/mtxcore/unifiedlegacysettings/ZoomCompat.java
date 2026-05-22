@@ -7,7 +7,6 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-// Toggles Zoomify stuff on and off and make camera not get stuck
 final class ZoomCompat {
 
   private static InputConstants.Key savedZoomKey;
@@ -35,12 +34,7 @@ final class ZoomCompat {
     KeyMapping secondary =
         findZoomKey("zoomify.key.zoom.secondary", "secondaryZoomKey");
 
-    Object cfg = RefUtil.staticField(
-        "dev.isxander.zoomify.config.ZoomifySettings", "INSTANCE");
-    Field enabled =
-        cfg == null ? null : RefUtil.field(cfg.getClass(), "enabled");
-    RefUtil.MethodRef save =
-        cfg == null ? null : RefUtil.method(cfg.getClass(), "save");
+    Object cfg = zoomifySettings();
 
     entries.add(ModSettingsCompat.Entry.toggleBefore(
         "maps with coordinates",
@@ -48,13 +42,13 @@ final class ZoomCompat {
             -> Component.literal("Zoom"),
         ()
             -> {
-          boolean next = !getEnabled(cfg, enabled, primary, secondary);
+          boolean next = !getEnabled(cfg, primary, secondary);
           zoomDesired = next;
           RefUtil.persistModDesired(next, RefUtil.PersistKey.ZOOM);
-          applyState(cfg, enabled, save, primary, secondary, next);
+          applyState(cfg, primary, secondary, next);
         },
         ()
-            -> getEnabled(cfg, enabled, primary, secondary),
+            -> getEnabled(cfg, primary, secondary),
         ()
             -> Component.literal(
                 "Magnify your view while holding the zoom control.")));
@@ -71,44 +65,35 @@ final class ZoomCompat {
     KeyMapping primary = findZoomKey("zoomify.key.zoom", "zoomKey");
     KeyMapping secondary =
         findZoomKey("zoomify.key.zoom.secondary", "secondaryZoomKey");
-    Object cfg = RefUtil.staticField(
-        "dev.isxander.zoomify.config.ZoomifySettings", "INSTANCE");
-    Field enabled =
-        cfg == null
-            ? null
-            : RefUtil.field(cfg == null ? null : cfg.getClass(), "enabled");
-    RefUtil.MethodRef save =
-        cfg == null ? null : RefUtil.method(cfg.getClass(), "save");
+    Object cfg = zoomifySettings();
 
-    if (getEnabled(cfg, enabled, primary, secondary) != desired)
-      applyState(cfg, enabled, save, primary, secondary, desired);
+    if (getEnabled(cfg, primary, secondary) != desired)
+      applyState(cfg, primary, secondary, desired);
 
     if (!desired)
       killActiveZoom();
   }
 
-  private static boolean getEnabled(Object cfg, Field enabled,
-                                    KeyMapping primary, KeyMapping secondary) {
+  private static boolean getEnabled(Object cfg, KeyMapping primary,
+                                    KeyMapping secondary) {
     Boolean desired = desiredState();
     if (desired != null)
       return desired;
-    if (cfg != null && enabled != null)
+    Field enabled = cfg == null ? null : RefUtil.field(cfg.getClass(),
+                                                       "enabled");
+    if (enabled != null)
       return RefUtil.readBooleanField(cfg, enabled, true) &&
           anyKeyBound(primary, secondary);
     return anyKeyBound(primary, secondary);
   }
 
-  private static void applyState(Object cfg, Field enabled,
-                                 RefUtil.MethodRef save, KeyMapping primary,
+  private static void applyState(Object cfg, KeyMapping primary,
                                  KeyMapping secondary, boolean on) {
-    if (cfg != null && enabled != null)
-      RefUtil.writeField(cfg, enabled, on);
+    setConfigEnabled(cfg, on);
     setKeyBound(primary, on, false);
     setKeyBound(secondary, on, true);
     if (!on)
       killActiveZoom();
-    if (cfg != null)
-      RefUtil.invoke(save, cfg);
     Minecraft.getInstance().options.save();
   }
 
@@ -136,49 +121,20 @@ final class ZoomCompat {
     refreshMappings();
   }
 
-  // Drain any queued clicks so HOLD/TOGGLE modes stop zooming immediately.
   private static void drainKey(KeyMapping key) {
+    if (key == null)
+      return;
     key.setDown(false);
-    // noinspection StatementWithEmptyBody
     while (key.consumeClick()) {
     }
   }
 
   private static void killActiveZoom() {
-    Object instance =
-        RefUtil.staticField("dev.isxander.zoomify.Zoomify", "INSTANCE");
-    if (instance == null)
-      return;
-
-    for (String name : new String[] {"zooming", "secondaryZooming"}) {
-      Field f = RefUtil.field(instance.getClass(), name);
-      if (f != null)
-        RefUtil.writeField(instance, f, false);
-    }
-    Field scrollSteps = RefUtil.field(instance.getClass(), "scrollSteps");
-    if (scrollSteps != null)
-      RefUtil.writeField(instance, scrollSteps, 0);
-
-    // Drain any live KeyMappings attached to the Zoomify instance
-    for (String name : new String[] {"zoomKey", "secondaryZoomKey",
-                                     "scrollZoomIn", "scrollZoomOut"}) {
-      Field f = RefUtil.field(instance.getClass(), name);
-      Object val = f == null ? null : RefUtil.readField(instance, f);
-      if (val instanceof KeyMapping km)
-        drainKey(km);
-    }
-
-    // If there's a zoom helper, snap it to zero
-    for (String name : new String[] {"zoomHelper", "secondaryZoomHelper"}) {
-      Field f = RefUtil.field(instance.getClass(), name);
-      Object helper = f == null ? null : RefUtil.readField(instance, f);
-      if (helper == null)
-        continue;
-      RefUtil.MethodRef setToZero = RefUtil.method(
-          helper.getClass(), "setToZero", boolean.class, boolean.class);
-      if (setToZero != null)
-        setToZero.invoke(helper, true, true);
-    }
+    KeyMapping primary = findZoomKey("zoomify.key.zoom", "zoomKey");
+    KeyMapping secondary =
+        findZoomKey("zoomify.key.zoom.secondary", "secondaryZoomKey");
+    drainKey(primary);
+    drainKey(secondary);
   }
 
   private static boolean anyKeyBound(KeyMapping a, KeyMapping b) {
@@ -192,9 +148,7 @@ final class ZoomCompat {
       if (val instanceof InputConstants.Key k)
         return k;
     }
-    Field f = RefUtil.field(key.getClass(), "key");
-    Object val = f == null ? null : RefUtil.readField(key, f);
-    return val instanceof InputConstants.Key k ? k : null;
+    return null;
   }
 
   private static void refreshMappings() {
@@ -207,8 +161,6 @@ final class ZoomCompat {
       mc.options.save();
   }
 
-  // Check the static field on Zoomify's class, then fall back to scanning all
-  // keybinds
   private static KeyMapping findZoomKey(String translationKey,
                                         String fieldName) {
     Class<?> cls = RefUtil.classForName("dev.isxander.zoomify.Zoomify");
@@ -223,5 +175,18 @@ final class ZoomCompat {
         return km;
     }
     return null;
+  }
+
+  private static Object zoomifySettings() {
+    return RefUtil.staticField(
+        "dev.isxander.zoomify.config.ZoomifySettings", "INSTANCE");
+  }
+
+  private static void setConfigEnabled(Object cfg, boolean enabled) {
+    if (cfg == null)
+      return;
+    RefUtil.writeField(cfg, RefUtil.field(cfg.getClass(), "enabled"),
+                       enabled);
+    RefUtil.invoke(RefUtil.method(cfg.getClass(), "save"), cfg);
   }
 }

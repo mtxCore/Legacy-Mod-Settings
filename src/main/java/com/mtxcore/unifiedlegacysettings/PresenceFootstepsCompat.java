@@ -1,7 +1,6 @@
 package com.mtxcore.unifiedlegacysettings;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -151,89 +150,37 @@ final class PresenceFootstepsCompat {
     RefUtil.MethodRef setDisabled =
         RefUtil.method(cfg.getClass(), "setDisabled", boolean.class);
 
-    try {
-      java.lang.reflect.Field disabledField =
-          RefUtil.field(cfg.getClass(), "disabled");
+    Field disabledField = RefUtil.field(cfg.getClass(), "disabled");
+    Object disabledSetting =
+        disabledField == null ? null : RefUtil.readField(cfg, disabledField);
+    RefUtil.MethodRef settingGet =
+        disabledSetting == null
+            ? null
+            : RefUtil.method(disabledSetting.getClass(), "get");
+    RefUtil.MethodRef settingSet =
+        disabledSetting == null
+            ? null
+            : RefUtil.method(disabledSetting.getClass(), "set", boolean.class);
+    RefUtil.MethodRef saveMethod = RefUtil.method(cfg.getClass(), "save");
 
-      if (disabledField != null) {
-        Object disabledSetting = RefUtil.readField(cfg, disabledField);
-        RefUtil.MethodRef settingSet = null;
-        RefUtil.MethodRef settingGet =
-            disabledSetting == null
-                ? null
-                : RefUtil.method(disabledSetting.getClass(), "get");
-        if (disabledSetting != null) {
-          settingSet =
-              RefUtil.method(disabledSetting.getClass(), "set", boolean.class);
-          if (settingSet == null)
-            settingSet = RefUtil.method(disabledSetting.getClass(), "set",
-                                        Boolean.class);
-          if (settingSet == null)
-            settingSet = RefUtil.method(disabledSetting.getClass(), "setValue",
-                                        boolean.class);
-          if (settingSet == null)
-            settingSet = RefUtil.method(disabledSetting.getClass(), "setValue",
-                                        Boolean.class);
-          if (settingSet == null) {
-            try {
-              for (Method m : disabledSetting.getClass().getMethods()) {
-                if (m.getParameterCount() != 1)
-                  continue;
-                Class<?> p = m.getParameterTypes()[0];
-                if (p == boolean.class || p == Boolean.class ||
-                    p.isAssignableFrom(Boolean.class)) {
-                  m.setAccessible(true);
-                  settingSet = new RefUtil.MethodRef(m, false);
-                  break;
-                }
-              }
-            } catch (Throwable t) {
-            }
-          }
+    if (settingSet != null && saveMethod != null) {
+      return new ToggleAccessor() {
+        @Override
+        public boolean isEnabled() {
+          if (getEnabled != null)
+            return RefUtil.invokeBoolean(getEnabled, cfg, true);
+          Object value = settingGet == null ? null : settingGet.invoke(
+              disabledSetting);
+          return value instanceof Boolean disabled ? !disabled : true;
         }
-        RefUtil.MethodRef saveMethod = RefUtil.method(cfg.getClass(), "save");
-        RefUtil.MethodRef getEngine =
-            RefUtil.method(mod.getClass(), "getEngine");
 
-        if (settingSet != null && saveMethod != null && getEngine != null) {
-          final RefUtil.MethodRef finalSettingSet = settingSet;
-          final RefUtil.MethodRef finalSettingGet = settingGet;
-          final Object finalDisabledSetting = disabledSetting;
-          final RefUtil.MethodRef finalSaveMethod = saveMethod;
-          final RefUtil.MethodRef finalGetEngine = getEngine;
-          final Object finalCfg = cfg;
-          final RefUtil.MethodRef finalGetEnabled = getEnabled;
-          final Object finalMod = mod;
-
-          return new ToggleAccessor() {
-            @Override
-            public boolean isEnabled() {
-              if (finalGetEnabled != null)
-                return RefUtil.invokeBoolean(finalGetEnabled, finalCfg, true);
-              if (finalSettingGet != null) {
-                Object v = finalSettingGet.invoke(finalDisabledSetting);
-                if (v instanceof Boolean b)
-                  return !b;
-              }
-              return true;
-            }
-
-            @Override
-            public void setEnabled(boolean enabled) {
-              finalSettingSet.invoke(finalDisabledSetting, !enabled);
-              finalSaveMethod.invoke(finalCfg);
-              Object engine = finalGetEngine.invoke(finalMod);
-              if (engine != null) {
-                RefUtil.MethodRef reload =
-                    RefUtil.method(engine.getClass(), "reload");
-                if (reload != null)
-                  reload.invoke(engine);
-              }
-            }
-          };
+        @Override
+        public void setEnabled(boolean enabled) {
+          settingSet.invoke(disabledSetting, !enabled);
+          saveMethod.invoke(cfg);
+          reloadEngine(mod);
         }
-      }
-    } catch (Throwable t) {
+      };
     }
 
     if (getEnabled == null || setDisabled == null)
@@ -248,8 +195,17 @@ final class PresenceFootstepsCompat {
       @Override
       public void setEnabled(boolean enabled) {
         setDisabled.invoke(cfg, !enabled);
+        reloadEngine(mod);
       }
     };
+  }
+
+  private static void reloadEngine(Object mod) {
+    Object engine = RefUtil.invoke(RefUtil.method(mod.getClass(), "getEngine"),
+                                   mod);
+    RefUtil.invoke(engine == null ? null : RefUtil.method(engine.getClass(),
+                                                          "reload"),
+                   engine);
   }
 
   private static ToggleAccessor resolveLegacyAccessor() {

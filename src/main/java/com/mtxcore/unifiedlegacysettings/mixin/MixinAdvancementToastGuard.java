@@ -42,6 +42,7 @@ public abstract class MixinAdvancementToastGuard {
     try {
       return Class.forName(name);
     } catch (Throwable ignored) {
+      // Advancement Screenshot is optional; if it moved, this guard is inert.
       return null;
     }
   }
@@ -55,6 +56,7 @@ public abstract class MixinAdvancementToastGuard {
         f.setAccessible(true);
         return f;
       } catch (NoSuchFieldException ignored) {
+        // Natamus utilities have changed package shape between MC versions.
       }
     }
     return null;
@@ -66,6 +68,7 @@ public abstract class MixinAdvancementToastGuard {
     try {
       field.set(target, value);
     } catch (Exception ignored) {
+      // Failing to clear one flag should not break vanilla advancement toasts.
     }
   }
 }

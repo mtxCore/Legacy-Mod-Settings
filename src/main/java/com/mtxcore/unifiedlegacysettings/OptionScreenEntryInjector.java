@@ -157,6 +157,7 @@ public final class OptionScreenEntryInjector {
       advancedOptionsField.setAccessible(true);
       return advancedOptionsField.get(screen);
     } catch (Exception ignored) {
+      // Older Legacy4J screens do not keep a nested advanced screen instance.
       return null;
     }
   }
@@ -296,6 +297,7 @@ public final class OptionScreenEntryInjector {
           .getMethod("setTooltip", Tooltip.class)
           .invoke(widget, tooltip);
     } catch (Exception ignored) {
+      // Some Legacy4J widgets expose tooltip support and some do not.
     }
   }
 
@@ -305,6 +307,7 @@ public final class OptionScreenEntryInjector {
           .getMethod("getMessage")
           .invoke(widget);
     } catch (Exception ignored) {
+      // Plain renderables often have no getMessage method.
     }
     try {
       Field f = findFieldInHierarchy(widget.getClass(), "message");
@@ -319,10 +322,12 @@ public final class OptionScreenEntryInjector {
           try {
             return fn.apply(Boolean.TRUE);
           } catch (Exception ignored2) {
+            // A broken dynamic label should only affect duplicate detection.
           }
         }
       }
     } catch (Exception ignored) {
+      // Message lookup is best-effort because this list mixes widgets and layout helpers.
     }
     return null;
   }
@@ -334,6 +339,7 @@ public final class OptionScreenEntryInjector {
         return c.getString() + " " + c;
       }
     } catch (Exception ignored) {
+      // Untitled nested screens are still detectable from their widgets.
     }
     return "";
   }
@@ -343,6 +349,7 @@ public final class OptionScreenEntryInjector {
       try {
         return cls.getDeclaredField(name);
       } catch (NoSuchFieldException ignored) {
+        // Legacy4J moves fields between screen superclasses across versions.
         cls = cls.getSuperclass();
       }
     }

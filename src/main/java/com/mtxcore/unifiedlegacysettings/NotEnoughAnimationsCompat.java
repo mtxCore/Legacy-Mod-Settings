@@ -84,6 +84,8 @@ final class NotEnoughAnimationsCompat {
         }
       }
     } catch (Exception ignored) {
+      // The toggle still works for the running game; save support depends on
+      // the NEA entrypoint shape for the installed version.
     }
   }
 }

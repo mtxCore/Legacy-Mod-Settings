@@ -93,6 +93,8 @@ final class ResourcePackCompat {
       JsonElement def = obj.get("default");
       return def != null && def.isJsonPrimitive() ? def.getAsString() : null;
     } catch (Exception ignored) {
+      // Albums are optional Legacy4J state; malformed JSON should not block the
+      // global resource-pack toggle.
       return null;
     }
   }
@@ -125,6 +127,8 @@ final class ResourcePackCompat {
       }
       return changed;
     } catch (Exception ignored) {
+      // Leave hand-edited or future album files alone if they do not match the
+      // current simple array format.
       return false;
     }
   }
