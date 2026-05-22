@@ -5,6 +5,7 @@
   "plugin": "com.mtxcore.unifiedlegacysettings.mixin.UnifiedLegacySettingsMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "MixinPanelBackgroundScreen",
     "MixinPanelVListScreen",
     "MixinOptionsScreenPanelHeight",
     "MixinLocatorWaypointTracking",
