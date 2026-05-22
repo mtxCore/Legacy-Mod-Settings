@@ -20,10 +20,10 @@
     "fabricloader": ">=${fabric_loader_version}",
     "fabric-api": ">=${fabric_api_version}",
     "minecraft": "${mc_version}",
-    "legacy": ">=0",
-    "cloth-config2": ">=${cloth_config_version}"
+    "legacy": ">=0"
   },
   "suggests": {
+    "cloth-config2": ">=${cloth_config_version}",
     "modmenu": ">=${modmenu_version}",
     "iris": ">=${iris_version}",
     "lambdynlights": ">=0",

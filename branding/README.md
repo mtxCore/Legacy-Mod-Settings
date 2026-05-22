@@ -9,9 +9,10 @@
   </p>
 
   <p align="center">
-    <a href="https://opensource.org/licenses/MIT"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_mit.png" alt="MIT License" width="64" height="63"></a>&nbsp;
+    <a href="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/refs/heads/main/LICENSE"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_mit.png" alt="MIT License" width="64" height="63"></a>&nbsp;
     <a href="https://fabricmc.net/"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_fabric.png" alt="Fabric" width="64" height="63"></a>&nbsp;
     <a href="https://modrinth.com/mod/unified-legacy-settings"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_modrinth.png" alt="Modrinth" width="64" height="63"></a>
+        <a href="https://ko-fi.com/H2H51ZR38L"><img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/b_kofi.png" alt="kofi" width="64" height="63"></a>
   </p>
 
   <br>
@@ -21,7 +22,9 @@
 
 ---
 
-Unified Legacy Settings adds supported mod options directly into the Legacy4J settings menus. Setting names and descriptions are styled to match the original LCE interface and options.
+Unified Legacy Settings adds supported mod options directly into the Legacy4J settings menus. Setting names and descriptions are styled to match the original LCE interface 
+and options.
+
 ---
 
 ## <img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/L_mods.png" alt="Supported Mods" width="450" height="40">
@@ -72,6 +75,7 @@ Unified Legacy Settings adds supported mod options directly into the Legacy4J se
 ## <img src="https://raw.githubusercontent.com/mtxCore/Legacy-Mod-Settings/main/branding/L_config.png" alt="Configuration" width="450" height="40">
 
 You can tweak things through **Mod Menu → Unified Legacy Settings → Config**
+when **Cloth Config** is installed.
 
 ---
 
@@ -82,7 +86,8 @@ Everything listed under Supported Mods is optional. The following are required:
 - [Fabric Loader](https://fabricmc.net/)
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 - [Legacy4J](https://modrinth.com/mod/legacy4j)
-- [Cloth Config](https://modrinth.com/mod/cloth-config)
+
+Cloth Config is optional and only needed for the Mod Menu config screen.
 
 ---
 

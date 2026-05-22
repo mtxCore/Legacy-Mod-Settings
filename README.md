@@ -27,6 +27,7 @@ Unified Legacy Settings adds optional mod toggles directly to Legacy4J menu scre
 
 Open Mod Menu -> Unified Legacy Settings -> Config.
 Settings are written to `config/unified_legacy_settings.json`.
+The Mod Menu config screen is available when Cloth Config is installed.
 
 ## Build
 
@@ -52,9 +53,8 @@ Java is selected by Gradle toolchains. For `buildAll`, set one of these only if 
 - Fabric Loader
 - Fabric API
 - Legacy4J
-- Cloth Config
 
-Integrated mods remain optional.
+Cloth Config and integrated mods remain optional.
 
 ## Adding an Integration
 

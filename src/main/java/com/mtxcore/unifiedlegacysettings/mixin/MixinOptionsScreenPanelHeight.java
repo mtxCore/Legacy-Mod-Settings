@@ -1,6 +1,7 @@
 package com.mtxcore.unifiedlegacysettings.mixin;
 
 import com.mtxcore.unifiedlegacysettings.ModSettingsConfig;
+import com.mtxcore.unifiedlegacysettings.ModSettingsCompat;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Locale;
@@ -18,7 +19,14 @@ public abstract class MixinOptionsScreenPanelHeight {
   private static final String[] UI_SECTION_MARKERS = {
       "display hud",
       "display hand",
-      "display game messages"
+      "display game messages",
+      "display chat indicators",
+      "show screenshot toasts",
+      "autosave countdown",
+      "chat portraits",
+      "take screenshot on achievement",
+      "screenshot taken message",
+      "screenshot delay"
   };
 
   @Unique
@@ -40,25 +48,40 @@ public abstract class MixinOptionsScreenPanelHeight {
           cancellable = true, remap = false)
   private void unifiedLegacySettings$keepAdvancedUiPanelStable(
       int fallbackHeight, boolean clamp, CallbackInfoReturnable<Integer> cir) {
-    if (!ModSettingsConfig.get().showAdvancementScreenshot) {
+    ModSettingsConfig cfg = ModSettingsConfig.get();
+    if (!cfg.showChatHeads && !cfg.showAdvancementScreenshot) {
       return;
     }
 
     String title = unifiedLegacySettings$getTitleText().toLowerCase(Locale.ROOT);
     List<?> renderables = unifiedLegacySettings$getRenderables();
+    ModSettingsCompat.Section section =
+        unifiedLegacySettings$detectSection(title, renderables);
     boolean looksLikeUiByTitle =
         unifiedLegacySettings$containsAnySubstring(title, UI_TITLE_MARKERS);
     boolean looksLikeUiByOptions =
         unifiedLegacySettings$containsAnyMessage(renderables, UI_SECTION_MARKERS);
-    if (!looksLikeUiByTitle && !looksLikeUiByOptions) {
+    if (section != ModSettingsCompat.Section.ADVANCED_USER_INTERFACE &&
+        !looksLikeUiByTitle && !looksLikeUiByOptions) {
       return;
     }
 
-    if (unifiedLegacySettings$lockedPanelHeight == null) {
-      unifiedLegacySettings$lockedPanelHeight = fallbackHeight;
+    int returnedHeight = cir.getReturnValue();
+    int stableHeight = Math.min(fallbackHeight, returnedHeight);
+    if (unifiedLegacySettings$lockedPanelHeight == null ||
+        stableHeight < unifiedLegacySettings$lockedPanelHeight) {
+      unifiedLegacySettings$lockedPanelHeight = stableHeight;
     }
 
     cir.setReturnValue(unifiedLegacySettings$lockedPanelHeight);
+  }
+
+  @Unique
+  @SuppressWarnings("unchecked")
+  private ModSettingsCompat.Section unifiedLegacySettings$detectSection(
+      String title, List<?> renderables) {
+    return ModSettingsCompat.detectSection(title, this.getClass().getName(),
+                                           (List<Object>)renderables);
   }
 
   @Unique
