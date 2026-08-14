@@ -223,9 +223,7 @@ final class ContinuityCompat {
     RefUtil.invoke(save, config);
 
     Minecraft mc = Minecraft.getInstance();
-    if (mc != null && mc.levelRenderer != null) {
-      mc.levelRenderer.allChanged();
-    }
+    RefUtil.refreshLevelRenderer(mc);
   }
 
   private static boolean

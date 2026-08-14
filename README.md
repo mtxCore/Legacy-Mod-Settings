@@ -30,6 +30,20 @@ You can also open it from the Unified Legacy Settings entry in Legacy4J's
 Advanced User Interface screen.
 Settings are written to `config/unified_legacy_settings.json`.
 
+## 1.2.0 Feature Update
+
+- Integration dashboard with installed and visible integration counts.
+- Optional missing-integration hiding for a cleaner config screen.
+- Installed/Missing labels beside every integration control.
+- One-click preset to show every integration entry.
+- One-click preset to show only currently installed integrations.
+- One-click preset to hide every integration entry.
+- One-click reset for remembered runtime states and Iris shader preference.
+
+If the config file becomes invalid JSON, Unified Legacy Settings now backs up
+the broken file as `unified_legacy_settings.json.broken-*` and recreates a
+fresh default config.
+
 ## Build
 
 ```bash
@@ -38,6 +52,7 @@ Settings are written to `config/unified_legacy_settings.json`.
 ./gradlew build -Pmc=1.21.8
 ./gradlew build -Pmc=1.21.10
 ./gradlew build -Pmc=26.1.2
+./gradlew build -Pmc=26.2
 ./gradlew buildAll
 ```
 

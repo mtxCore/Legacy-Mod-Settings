@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.function.Consumer;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -33,6 +34,10 @@ public final class ModSettingsConfig {
   private ModSettingsConfig() {}
 
   public boolean showAdvancedGraphicalEffects = true;
+
+  public boolean hideMissingIntegrationsInConfig = false;
+
+  public boolean showIntegrationStatusInConfig = true;
 
   @SerializedName(value = "showInLegacySettings",
                   alternate = {"showIrisInLegacySettings"})
@@ -117,7 +122,10 @@ public final class ModSettingsConfig {
     } catch (IOException | JsonSyntaxException e) {
       UnifiedLegacySettings.LOGGER.error(
           "[ULS] Failed to load config, using defaults", e);
-      return new ModSettingsConfig();
+      backupBrokenConfig(source);
+      ModSettingsConfig cfg = new ModSettingsConfig();
+      cfg.saveToFile();
+      return cfg;
     }
   }
 
@@ -144,5 +152,18 @@ public final class ModSettingsConfig {
       changed = true;
     }
     return changed;
+  }
+
+  private static void backupBrokenConfig(Path source) {
+    try {
+      if (source == null || !Files.exists(source))
+        return;
+      String stamp = Long.toString(Instant.now().toEpochMilli());
+      Files.copy(source, source.resolveSibling(source.getFileName() +
+                                              ".broken-" + stamp));
+    } catch (IOException backupError) {
+      UnifiedLegacySettings.LOGGER.error(
+          "[ULS] Failed to back up broken config", backupError);
+    }
   }
 }

@@ -224,7 +224,9 @@ public class ModSettingsCompat {
         () -> Component.literal("Unified Legacy Settings"),
         () -> {
           Minecraft minecraft = Minecraft.getInstance();
-          minecraft.setScreen(NativeConfigScreen.create(minecraft.screen));
+          RefUtil.setScreen(
+              minecraft,
+              NativeConfigScreen.create(RefUtil.currentScreen(minecraft)));
         },
         () -> Component.literal(
             "Configure Unified Legacy Settings integrations.")));

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -43,67 +44,121 @@ public final class NativeConfigScreen extends PanelVListScreen {
   private void buildRows() {
     ModSettingsConfig cfg = ModSettingsConfig.get();
 
+    category("Overview");
+    info("Installed Integrations: " + IntegrationCatalog.installedCount() +
+         " / " + IntegrationCatalog.totalCount());
+    info("Visible Installed Entries: " +
+         IntegrationCatalog.visibleInstalledCount(cfg) + " / " +
+         IntegrationCatalog.installedCount());
+
     category("Placement");
     toggle("Show In Main Legacy Settings Menus", () -> cfg.showInLegacySettings,
            v -> cfg.showInLegacySettings = v,
            "Show Unified Legacy Settings entries on main Legacy category screens.");
+    toggle("Hide Missing Integrations In Config",
+           () -> cfg.hideMissingIntegrationsInConfig,
+           v -> cfg.hideMissingIntegrationsInConfig = v,
+           "Hide config controls for integrations whose mods are not installed.");
+    toggle("Show Installed/Missing Labels",
+           () -> cfg.showIntegrationStatusInConfig,
+           v -> cfg.showIntegrationStatusInConfig = v,
+           "Add installation status labels to integration controls.");
+
+    category("Bulk Actions");
+    action("Show All Integration Entries",
+           () -> IntegrationCatalog.applyVisibilityPreset(
+               ModSettingsConfig.get(),
+               IntegrationCatalog.VisibilityPreset.ALL),
+           "Enable every Unified Legacy Settings integration entry.");
+    action("Show Installed Integration Entries",
+           () -> IntegrationCatalog.applyVisibilityPreset(
+               ModSettingsConfig.get(),
+               IntegrationCatalog.VisibilityPreset.INSTALLED_ONLY),
+           "Enable entries only for integrations currently installed.");
+    action("Hide All Integration Entries",
+           () -> IntegrationCatalog.applyVisibilityPreset(
+               ModSettingsConfig.get(),
+               IntegrationCatalog.VisibilityPreset.NONE),
+           "Hide every integration entry from Legacy4J settings menus.");
+    action("Reset Remembered Runtime States",
+           () -> IntegrationCatalog.clearRememberedRuntimeStates(
+               ModSettingsConfig.get()),
+           "Clear saved on/off states for runtime-managed integrations.");
 
     category("Graphics");
-    toggle("Advanced Graphical Effects (Iris)",
+    integrationToggle("Advanced Graphical Effects (Iris)",
+           new String[] {"iris"},
            () -> cfg.showAdvancedGraphicalEffects,
            v -> cfg.showAdvancedGraphicalEffects = v,
            "Adds the shader on/off toggle to the Graphics screen.");
 
     category("Advanced Graphics");
-    toggle("Extended Online Render Distance (Bobby)",
+    integrationToggle("Extended Online Render Distance (Bobby)",
+           new String[] {"bobby"},
            () -> cfg.showBobbyOptions, v -> cfg.showBobbyOptions = v,
            "Adds Bobby's extended-distance toggle in Advanced Graphics.");
-    toggle("Grass Detail (LambdaBetterGrass)", () -> cfg.showGrassDetail,
+    integrationToggle("Grass Detail (LambdaBetterGrass)",
+           new String[] {"lambdabettergrass"}, () -> cfg.showGrassDetail,
            v -> cfg.showGrassDetail = v,
            "Adds the Grass Detail slider in Advanced Graphics.");
-    toggle("Snow Layer Blending (LambdaBetterGrass)",
+    integrationToggle("Snow Layer Blending (LambdaBetterGrass)",
+           new String[] {"lambdabettergrass"},
            () -> cfg.showSnowLayerBlending,
            v -> cfg.showSnowLayerBlending = v,
            "Adds the Snow Layer Blending toggle in Advanced Graphics.");
-    toggle("Connected + Emissive Textures (Continuity)",
+    integrationToggle("Connected + Emissive Textures (Continuity)",
+           new String[] {"continuity"},
            () -> cfg.showContinuity, v -> cfg.showContinuity = v,
            "Adds Continuity texture toggles in Advanced Graphics.");
-    toggle("Third-Person Animations (NotEnoughAnimations)",
+    integrationToggle("Third-Person Animations (NotEnoughAnimations)",
+           new String[] {"notenoughanimations"},
            () -> cfg.showNeaAnimations, v -> cfg.showNeaAnimations = v,
            "Adds the Third-Person Animations toggle in Advanced Graphics.");
 
     category("Game Options");
-    toggle("Dynamic Lighting (LambDynamicLights)",
+    integrationToggle("Dynamic Lighting (LambDynamicLights)",
+           new String[] {"lambdynlights"},
            () -> cfg.showDynamicLighting,
            v -> cfg.showDynamicLighting = v,
            "Adds the Dynamic Lighting toggle in Game Options.");
-    toggle("Minimap (Xaero)", () -> cfg.showXaeroMinimap,
+    integrationToggle("Minimap (Xaero)", new String[] {"xaerominimap"},
+           () -> cfg.showXaeroMinimap,
            v -> cfg.showXaeroMinimap = v,
            "Adds the Minimap toggle in Game Options.");
 
     category("Advanced Game Options");
-    toggle("Zoom (Zoomify)", () -> cfg.showZoom, v -> cfg.showZoom = v,
+    integrationToggle("Zoom (Zoomify)", new String[] {"zoomify"},
+           () -> cfg.showZoom, v -> cfg.showZoom = v,
            "Adds the Zoom toggle in Advanced Game Options.");
-    toggle("Locator Compass (Locator Lodestones)",
+    integrationToggle("Locator Compass (Locator Lodestones)",
+           new String[] {"locator_lodestones"},
            () -> cfg.showLocatorLodestones,
            v -> cfg.showLocatorLodestones = v,
            "Adds a master Locator Compass toggle in Advanced Game Options.");
 
     category("User Interface");
-    toggle("Chat Portraits (Chat Heads)", () -> cfg.showChatHeads,
+    integrationToggle("Chat Portraits (Chat Heads)",
+           new String[] {"chat_heads", "chatheads"}, () -> cfg.showChatHeads,
            v -> cfg.showChatHeads = v,
            "Adds the Chat Portraits toggle in User Interface.");
-    toggle("Show Advancement Screenshot Controls",
+    integrationToggle("Show Advancement Screenshot Controls",
+           new String[] {"advancementscreenshot"},
            () -> cfg.showAdvancementScreenshot,
            v -> cfg.showAdvancementScreenshot = v,
            "Adds Advancement Screenshot controls in User Interface.");
-    toggle("Take Screenshot on Achievement",
-           () -> cfg.advancementScreenshotEnabled,
-           AdvancementScreenshotCompat::setTakeScreenshotOnAchievement,
-           "Allows Advancement Screenshot to save screenshots when achievements appear.");
+    if (IntegrationCatalog.shouldShowConfigRow(
+            cfg, "advancementscreenshot")) {
+      toggle(IntegrationCatalog.label(
+                 cfg, "Take Screenshot on Achievement",
+                 "advancementscreenshot"),
+             () -> cfg.advancementScreenshotEnabled,
+             AdvancementScreenshotCompat::setTakeScreenshotOnAchievement,
+             "Allows Advancement Screenshot to save screenshots when achievements appear.");
+    }
 
     category("Audio");
-    toggle("Presence Footsteps", () -> cfg.showPresenceFootsteps,
+    integrationToggle("Presence Footsteps",
+           new String[] {"presencefootsteps"}, () -> cfg.showPresenceFootsteps,
            v -> cfg.showPresenceFootsteps = v,
            "Adds the Presence Footsteps toggle in Audio.");
 
@@ -145,6 +200,36 @@ public final class NativeConfigScreen extends PanelVListScreen {
         0, 0, 200, () -> Component.literal(label), selected,
         value -> ModSettingsConfig.mutateAndSave(cfg -> save.accept(value)),
         () -> Component.literal(tooltip)));
+  }
+
+  private void integrationToggle(String label, String[] modIds,
+                                 BooleanSupplier selected,
+                                 Consumer<Boolean> save, String tooltip) {
+    ModSettingsConfig cfg = ModSettingsConfig.get();
+    if (!IntegrationCatalog.shouldShowConfigRow(cfg, modIds))
+      return;
+    toggle(IntegrationCatalog.label(cfg, label, modIds), selected, save,
+           tooltip);
+  }
+
+  private void action(String label, Runnable save, String tooltip) {
+    AbstractWidget button = LegacyWidgetFactory.button(
+        0, 0, 200, 20, Component.literal(label), b -> {
+          ModSettingsConfig.mutateAndSave(cfg -> save.run());
+          Minecraft minecraft = Minecraft.getInstance();
+          RefUtil.setScreen(
+              minecraft,
+              NativeConfigScreen.create(RefUtil.currentScreen(minecraft)));
+        });
+    button.setTooltip(Tooltip.create(Component.literal(tooltip)));
+    renderableVList.addRenderable(button);
+  }
+
+  private void info(String label) {
+    AbstractWidget row = LegacyWidgetFactory.button(
+        0, 0, 200, 20, Component.literal(label), b -> {});
+    row.active = false;
+    renderableVList.addRenderable(row);
   }
 
   private void cycle(String label, OptionList choices, StringSupplier current,

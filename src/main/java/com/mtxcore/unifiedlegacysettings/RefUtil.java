@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 final class RefUtil {
@@ -149,6 +151,39 @@ final class RefUtil {
     if (ref == null)
       return null;
     return ref.isStatic() ? ref.invokeStatic(args) : ref.invoke(target, args);
+  }
+
+  static Screen currentScreen(Minecraft minecraft) {
+    Object direct = instanceField(minecraft, "screen");
+    if (direct instanceof Screen screen)
+      return screen;
+
+    Object gui = instanceField(minecraft, "gui");
+    Object current = invoke(method(gui == null ? null : gui.getClass(),
+                                   "screen"), gui);
+    return current instanceof Screen screen ? screen : null;
+  }
+
+  static void setScreen(Minecraft minecraft, Screen screen) {
+    MethodRef direct = method(minecraft.getClass(), "setScreen", Screen.class);
+    if (direct != null) {
+      invoke(direct, minecraft, screen);
+      return;
+    }
+
+    Object gui = instanceField(minecraft, "gui");
+    invoke(method(gui == null ? null : gui.getClass(), "setScreen",
+                  Screen.class), gui, screen);
+  }
+
+  static void refreshLevelRenderer(Minecraft minecraft) {
+    if (minecraft == null || minecraft.levelRenderer == null)
+      return;
+    Object renderer = minecraft.levelRenderer;
+    MethodRef refresh = method(renderer.getClass(), "allChanged");
+    if (refresh == null)
+      refresh = method(renderer.getClass(), "resetLevelRenderData");
+    invoke(refresh, renderer);
   }
 
   static boolean invokeBoolean(MethodRef ref, Object target, boolean fallback,

@@ -3,7 +3,7 @@ buildscript {
         maven { url = uri("https://maven.fabricmc.net/") }
     }
     dependencies {
-        classpath "net.fabricmc:fabric-loom:1.16-SNAPSHOT"
+        classpath "net.fabricmc:fabric-loom:1.17.19"
     }
 }
 plugins {
@@ -13,26 +13,29 @@ plugins {
 // Keep all version pins in one map so buildAll and single-version builds resolve identically.
 def versions = [
     "1.21.1": [
-        loader:    "0.15.11",
-        fabricApi: "0.116.7+1.21.1",
+        loader:    "0.19.3",
+        fabricApi: "0.116.15+1.21.1",
+        fabricApiMinimum: "0.116.14+1.21.1",
         iris:      "1.8.8+1.21.1-fabric",
         legacy4j:  "1.21.1-1.8.6-lts+fabric",
         factoryApi:"1.21.1-2.2.8-fabric",
-        modmenu:   "11.0.3",
+        modmenu:   "11.0.4",
         java:      21
     ],
     "1.21.8": [
-        loader:    "0.16.13",
+        loader:    "0.19.3",
         fabricApi: "0.136.1+1.21.8",
+        fabricApiMinimum: "0.136.1+1.21.8",
         iris:      "1.9.6+1.21.8-fabric",
         legacy4j:  "1.21.8-1.8.5+fabric",
         factoryApi:"1.21.8-2.2.8-fabric",
-        modmenu:   "15.0.1",
+        modmenu:   "15.0.2",
         java:      21
     ],
     "1.21.10": [
-        loader:    "0.17.0",
+        loader:    "0.19.3",
         fabricApi: "0.138.4+1.21.10",
+        fabricApiMinimum: "0.138.4+1.21.10",
         iris:      "1.9.7+1.21.10-fabric",
         legacy4j:  "1.21.10-1.8.7+fabric",
         factoryApi:"1.21.10-2.2.8-fabric",
@@ -40,12 +43,24 @@ def versions = [
         java:      21
     ],
     "26.1.2": [
-        loader:         "0.18.4",
-        fabricApi:      "0.148.0+26.1.2",
-        iris:           "1.10.9+26.1-fabric",
+        loader:         "0.19.3",
+        fabricApi:      "0.155.2+26.1.2",
+        fabricApiMinimum: "0.155.2+26.1.2",
+        iris:           "1.11.3+26.1-fabric",
         legacy4j:       "26.1.2-1.9-pre-2-fabric",
         factoryApi:     "26.1.2-2.2.8-fabric",
-        modmenu:        "18.0.0-alpha.8",
+        modmenu:        "18.0.0",
+        java:           25,
+        nonObfuscated:  true
+    ],
+    "26.2": [
+        loader:         "0.19.3",
+        fabricApi:      "0.157.0+26.2",
+        fabricApiMinimum: "0.155.2+26.2",
+        iris:           "1.11.2+26.2-fabric",
+        legacy4j:       "26.2-1.9-pre-2-fabric",
+        legacy4jDirect: true,
+        modmenu:        "20.0.1",
         java:           25,
         nonObfuscated:  true
     ],
@@ -95,10 +110,27 @@ repositories {
         }
         filter { includeGroup "maven.modrinth" }
     }
+
+    ivy {
+        name = "Legacy4JGitHubReleases"
+        url = "https://github.com/omo50/l4jnext2/releases/download"
+        patternLayout {
+            artifact "[artifact]-[revision]/[artifact]-[revision].[ext]"
+        }
+        metadataSources { artifact() }
+        content { includeGroup "wily.legacy.github" }
+    }
 }
 
 def implConfig      = isNonObfuscated ? "implementation"  : "modImplementation"
 def compileOnlyConf = isNonObfuscated ? "compileOnly"     : "modCompileOnly"
+def embeddedFactoryApi = layout.buildDirectory.file(
+    "generated/legacy4j-deps/factory_api-fabric-26.2-2.2.8.jar"
+)
+
+configurations {
+    legacy4jDirect
+}
 
 dependencies {
     minecraft "com.mojang:minecraft:${targetMc}"
@@ -110,10 +142,35 @@ dependencies {
     "${implConfig}" "net.fabricmc.fabric-api:fabric-api:${v.fabricApi}"
 
     "${compileOnlyConf}" "maven.modrinth:iris:${v.iris}"
-    "${compileOnlyConf}" "maven.modrinth:legacy4j:${v.legacy4j}"
-    "${compileOnlyConf}" "maven.modrinth:factory-api:${v.factoryApi}"
+    if (v.legacy4jDirect) {
+        legacy4jDirect("wily.legacy.github:Legacy4J:${v.legacy4j}@jar") {
+            transitive = false
+        }
+        "${compileOnlyConf}"("wily.legacy.github:Legacy4J:${v.legacy4j}@jar") {
+            transitive = false
+        }
+        "${compileOnlyConf}" files(embeddedFactoryApi)
+    } else {
+        "${compileOnlyConf}" "maven.modrinth:legacy4j:${v.legacy4j}"
+    }
+    if (v.factoryApi) {
+        "${compileOnlyConf}" "maven.modrinth:factory-api:${v.factoryApi}"
+    }
 
     "${compileOnlyConf}" "maven.modrinth:modmenu:${v.modmenu}"
+}
+
+if (v.legacy4jDirect) {
+    def extractLegacyFactoryApi = tasks.register("extractLegacyFactoryApi", Copy) {
+        from { configurations.legacy4jDirect.collect { zipTree(it) } }
+        include "META-INF/jars/factory_api-fabric-26.2-2.2.8.jar"
+        eachFile { path = name }
+        includeEmptyDirs = false
+        into embeddedFactoryApi.get().asFile.parentFile
+    }
+    tasks.named("compileJava") {
+        dependsOn extractLegacyFactoryApi
+    }
 }
 
 java {
@@ -130,7 +187,7 @@ processResources {
     inputs.property "version",               project.version
     inputs.property "mc_version",            targetMc
     inputs.property "fabric_loader_version", v.loader
-    inputs.property "fabric_api_version",    v.fabricApi
+    inputs.property "fabric_api_minimum",    v.fabricApiMinimum
     inputs.property "modmenu_version",       v.modmenu
     inputs.property "iris_version",          v.iris
 
@@ -139,7 +196,7 @@ processResources {
             version:               project.version,
             mc_version:            targetMc,
             fabric_loader_version: v.loader,
-            fabric_api_version:    v.fabricApi,
+            fabric_api_minimum:    v.fabricApiMinimum,
             modmenu_version:       v.modmenu,
             iris_version:          v.iris
         )
